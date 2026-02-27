@@ -1,0 +1,152 @@
+# ==============================
+# Server Configuration
+# ==============================
+server:
+  port: 8081
+  servlet:
+    context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  tomcat:
+    connection-timeout: 30000
+    max-connections: 200
+    threads:
+      max: 50
+      min-spare: 5
+
+# ==============================
+# Spring Boot Configuration
+# ==============================
+spring:
+  application:
+    name: moment-forever-booking
+
+  # --------- DATASOURCE ---------
+  datasource:
+    url: jdbc:postgresql://localhost:5432/moment_forver_book
+    username: postgres
+    password: groote
+    driver-class-name: org.postgresql.Driver
+
+    hikari:
+      pool-name: MomentForever-HikariPool
+      connection-timeout: 30000
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+      auto-commit: false
+
+  # --------- JPA / HIBERNATE ---------
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 20
+          order_inserts: true
+          order_updates: true
+        query:
+          in_clause_parameter_padding: true
+        id:
+          new_generator_mappings: true
+
+  # --------- KAFKA ---------
+  kafka:
+    bootstrap-servers: localhost:9092
+
+  # --------- MONGODB ---------
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017
+      database: moment_forver_book
+
+  # --------- FILE UPLOAD ---------
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+      file-size-threshold: 2KB
+
+  # --------- JACKSON ---------
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      indent-output: true
+    deserialization:
+      fail-on-unknown-properties: false
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: UTC
+    default-property-inclusion: non_null
+
+# ==============================
+# Logging
+# ==============================
+logging:
+  level:
+    com.forvmom.booking: DEBUG
+    org.springframework.kafka: INFO
+
+# ==============================
+# Custom App Config
+# ==============================
+app:
+  base-url: http://localhost:8081
+  file:
+    upload-dir: ./uploads/
+    max-size: 5242880
+    allowed-extensions: jpg,jpeg,png,gif,webp
+    serve-path: /uploads/**
+
+slug:
+  separator: "-"
+  max-length: 100
+
+rate-limit:
+  login:
+    max-attempts: 5
+    window-minutes: 15
+  registration:
+    max-per-hour: 10
+    max-per-ip: 50
+
+# ==============================
+# Actuator
+# ==============================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+  probes:
+    enabled: true
+
+# ==============================
+# Swagger
+# ==============================
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    url: /v3/api-docs
+  api-docs:
+    path: /v3/api-docs
+
+# ==============================
+# Object Storage
+# ==============================
+object:
+  store:
+    provider: gridfs
+    gridfs-bucket: fs
