@@ -67,6 +67,7 @@ spring:
 # ============================================
 # KAFKA TOPICS
 # ============================================
+kafka:
   topics:
     booking-requested: topic_booking_requested
     booking-confirmed: topic_booking_confirmed
@@ -102,8 +103,7 @@ spring:
 # ==============================
 logging:
   level:
-    com.forvmom.booking: DEBUG
-    org.springframework.kafka: INFO
+    com.forvmom.MomentForeverBooking: DEBUG
 
 # ==============================
 # Custom App Config

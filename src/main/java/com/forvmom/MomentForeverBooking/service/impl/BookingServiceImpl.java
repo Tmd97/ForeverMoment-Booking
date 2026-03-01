@@ -1,8 +1,8 @@
 package com.forvmom.MomentForeverBooking.service.impl;
 
+import com.forvmom.MomentForeverBooking.dto.response.BookingRequestEvent;
 import com.forvmom.common.dto.events.BookingConfirmedEvent;
 import com.forvmom.common.dto.events.BookingFailedEvent;
-import com.forvmom.common.dto.events.BookingRequestEvent;
 import com.forvmom.common.dto.events.PaymentRequestedEvent;
 import com.forvmom.MomentForeverBooking.domain.entity.Booking;
 import com.forvmom.MomentForeverBooking.domain.entity.BookingAddon;
@@ -44,6 +44,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         // 1. Map event to Booking entity
+
         Booking booking = new Booking();
         booking.setBookingId(event.getBookingId());
         booking.setUserId(event.getUserId());

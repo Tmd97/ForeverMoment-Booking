@@ -1,6 +1,6 @@
 package com.forvmom.MomentForeverBooking.consumer;
 
-import com.forvmom.common.dto.events.BookingRequestEvent;
+import com.forvmom.MomentForeverBooking.dto.response.BookingRequestEvent;
 import com.forvmom.MomentForeverBooking.service.BookingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

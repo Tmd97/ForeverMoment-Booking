@@ -1,7 +1,7 @@
 package com.forvmom.MomentForeverBooking.service;
 
-import com.forvmom.common.dto.events.BookingRequestEvent;
 import com.forvmom.MomentForeverBooking.domain.entity.Booking;
+import com.forvmom.MomentForeverBooking.dto.response.BookingRequestEvent;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

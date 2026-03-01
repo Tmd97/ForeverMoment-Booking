@@ -27,6 +27,15 @@ public class BookingKafkaConfig {
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
     private String bootstrapServers;
 
+    @Value("${kafka.topics.booking-requested}")
+    private String bookingRequestedTopic;
+
+    @Value("${kafka.topics.booking-confirmed}")
+    private String bookingConfirmedTopic;
+
+    @Value("${kafka.topics.booking-failed}")
+    private String bookingFailedTopic;
+
     // ==================== PRODUCER CONFIG ====================
     // Booking service produces:
     // - booking-confirmed (to Core)
@@ -66,10 +75,20 @@ public class BookingKafkaConfig {
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ConsumerConfig.GROUP_ID_CONFIG, "booking-group");
 
-        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                org.springframework.kafka.support.serializer.ErrorHandlingDeserializer.class);
+        config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                org.springframework.kafka.support.serializer.ErrorHandlingDeserializer.class);
+
+        config.put(org.springframework.kafka.support.serializer.ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS,
+                StringDeserializer.class);
+        config.put(org.springframework.kafka.support.serializer.ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS,
+                JsonDeserializer.class);
 
         config.put(JsonDeserializer.TRUSTED_PACKAGES, "com.forvmom.common.dto.events");
+        // Also map the event type explicitly to avoid ClassNotFoundException if the
+        // sender doesn't set type headers
+        config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.forvmom.common.dto.events.BookingRequestEvent");
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
@@ -100,7 +119,7 @@ public class BookingKafkaConfig {
     // Topics Booking CONSUMES
     @Bean
     public NewTopic bookingRequestedTopic() {
-        return TopicBuilder.name("booking-requested")
+        return TopicBuilder.name(bookingRequestedTopic)
                 .partitions(1)
                 .replicas(1)
                 .build();
@@ -125,7 +144,7 @@ public class BookingKafkaConfig {
     // Topics Booking PRODUCES
     @Bean
     public NewTopic bookingConfirmedTopic() {
-        return TopicBuilder.name("booking-confirmed")
+        return TopicBuilder.name(bookingConfirmedTopic)
                 .partitions(1)
                 .replicas(1)
                 .build();
@@ -133,7 +152,7 @@ public class BookingKafkaConfig {
 
     @Bean
     public NewTopic bookingFailedTopic() {
-        return TopicBuilder.name("booking-failed")
+        return TopicBuilder.name(bookingFailedTopic)
                 .partitions(1)
                 .replicas(1)
                 .build();

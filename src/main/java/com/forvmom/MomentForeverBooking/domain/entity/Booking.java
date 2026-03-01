@@ -3,6 +3,7 @@ package com.forvmom.MomentForeverBooking.domain.entity;
 import com.forvmom.MomentForeverBooking.domain.enums.BookingStatus;
 import com.forvmom.MomentForeverBooking.domain.enums.PricingLevel;
 import jakarta.persistence.*;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
@@ -24,8 +25,6 @@ import java.util.List;
         @Index(name = "idx_booking_status", columnList = "status"),
         @Index(name = "idx_booking_experience", columnList = "experience_id")
 })
-@Getter
-@Setter
 public class Booking {
 
     @Id
@@ -120,5 +119,231 @@ public class Booking {
     public void addAddon(BookingAddon addon) {
         addons.add(addon);
         addon.setBooking(this);
+    }
+
+
+    public String getBookingId() {
+        return bookingId;
+    }
+
+    public void setBookingId(String bookingId) {
+        this.bookingId = bookingId;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public String getUserEmail() {
+        return userEmail;
+    }
+
+    public void setUserEmail(String userEmail) {
+        this.userEmail = userEmail;
+    }
+
+    public String getUserFullName() {
+        return userFullName;
+    }
+
+    public void setUserFullName(String userFullName) {
+        this.userFullName = userFullName;
+    }
+
+    public Long getExperienceId() {
+        return experienceId;
+    }
+
+    public void setExperienceId(Long experienceId) {
+        this.experienceId = experienceId;
+    }
+
+    public String getExperienceName() {
+        return experienceName;
+    }
+
+    public void setExperienceName(String experienceName) {
+        this.experienceName = experienceName;
+    }
+
+    public String getExperienceSlug() {
+        return experienceSlug;
+    }
+
+    public void setExperienceSlug(String experienceSlug) {
+        this.experienceSlug = experienceSlug;
+    }
+
+    public Long getLocationId() {
+        return locationId;
+    }
+
+    public void setLocationId(Long locationId) {
+        this.locationId = locationId;
+    }
+
+    public String getLocationName() {
+        return locationName;
+    }
+
+    public void setLocationName(String locationName) {
+        this.locationName = locationName;
+    }
+
+    public Long getTimeSlotMapperId() {
+        return timeSlotMapperId;
+    }
+
+    public void setTimeSlotMapperId(Long timeSlotMapperId) {
+        this.timeSlotMapperId = timeSlotMapperId;
+    }
+
+    public Long getTimeSlotId() {
+        return timeSlotId;
+    }
+
+    public void setTimeSlotId(Long timeSlotId) {
+        this.timeSlotId = timeSlotId;
+    }
+
+    public String getTimeSlotLabel() {
+        return timeSlotLabel;
+    }
+
+    public void setTimeSlotLabel(String timeSlotLabel) {
+        this.timeSlotLabel = timeSlotLabel;
+    }
+
+    public String getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(String startTime) {
+        this.startTime = startTime;
+    }
+
+    public String getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(String endTime) {
+        this.endTime = endTime;
+    }
+
+    public Integer getGuestCount() {
+        return guestCount;
+    }
+
+    public void setGuestCount(Integer guestCount) {
+        this.guestCount = guestCount;
+    }
+
+    public BookingStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(BookingStatus status) {
+        this.status = status;
+    }
+
+    public BigDecimal getResolvedPricePerPerson() {
+        return resolvedPricePerPerson;
+    }
+
+    public void setResolvedPricePerPerson(BigDecimal resolvedPricePerPerson) {
+        this.resolvedPricePerPerson = resolvedPricePerPerson;
+    }
+
+    public PricingLevel getPricingLevel() {
+        return pricingLevel;
+    }
+
+    public void setPricingLevel(PricingLevel pricingLevel) {
+        this.pricingLevel = pricingLevel;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
+
+    public void setTotalAmount(BigDecimal totalAmount) {
+        this.totalAmount = totalAmount;
+    }
+
+    public BigDecimal getAddonsTotal() {
+        return addonsTotal;
+    }
+
+    public void setAddonsTotal(BigDecimal addonsTotal) {
+        this.addonsTotal = addonsTotal;
+    }
+
+    public BigDecimal getGrandTotal() {
+        return grandTotal;
+    }
+
+    public void setGrandTotal(BigDecimal grandTotal) {
+        this.grandTotal = grandTotal;
+    }
+
+    public String getPincode() {
+        return pincode;
+    }
+
+    public void setPincode(String pincode) {
+        this.pincode = pincode;
+    }
+
+    public String getFailureReason() {
+        return failureReason;
+    }
+
+    public void setFailureReason(String failureReason) {
+        this.failureReason = failureReason;
+    }
+
+    public LocalDateTime getRequestedAt() {
+        return requestedAt;
+    }
+
+    public void setRequestedAt(LocalDateTime requestedAt) {
+        this.requestedAt = requestedAt;
+    }
+
+    public LocalDateTime getConfirmedAt() {
+        return confirmedAt;
+    }
+
+    public void setConfirmedAt(LocalDateTime confirmedAt) {
+        this.confirmedAt = confirmedAt;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public List<BookingAddon> getAddons() {
+        return addons;
+    }
+
+    public void setAddons(List<BookingAddon> addons) {
+        this.addons = addons;
+
     }
 }

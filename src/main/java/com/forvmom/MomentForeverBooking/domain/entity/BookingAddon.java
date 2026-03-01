@@ -1,6 +1,7 @@
 package com.forvmom.MomentForeverBooking.domain.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,8 +12,6 @@ import java.math.BigDecimal;
  */
 @Entity
 @Table(name = "booking_addons")
-@Getter
-@Setter
 public class BookingAddon {
 
     @Id
@@ -34,4 +33,53 @@ public class BookingAddon {
 
     @Column(name = "is_free", nullable = false)
     private boolean free;
+
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Booking getBooking() {
+        return booking;
+    }
+
+    public void setBooking(Booking booking) {
+        this.booking = booking;
+    }
+
+    public Long getAddonMapperId() {
+        return addonMapperId;
+    }
+
+    public void setAddonMapperId(Long addonMapperId) {
+        this.addonMapperId = addonMapperId;
+    }
+
+    public String getAddonName() {
+        return addonName;
+    }
+
+    public void setAddonName(String addonName) {
+        this.addonName = addonName;
+    }
+
+    public BigDecimal getEffectivePrice() {
+        return effectivePrice;
+    }
+
+    public void setEffectivePrice(BigDecimal effectivePrice) {
+        this.effectivePrice = effectivePrice;
+    }
+
+    public boolean isFree() {
+        return free;
+    }
+
+    public void setFree(boolean free) {
+        this.free = free;
+    }
 }
