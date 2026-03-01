@@ -63,6 +63,15 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
 
+
+# ============================================
+# KAFKA TOPICS
+# ============================================
+  topics:
+    booking-requested: topic_booking_requested
+    booking-confirmed: topic_booking_confirmed
+    booking-failed: topic_booking_failed
+
   # --------- MONGODB ---------
   data:
     mongodb:
