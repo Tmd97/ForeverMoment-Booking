@@ -13,7 +13,7 @@ FROM maven:3.9.9-eclipse-temurin-17-alpine
 # Set working directory inside the container for runtime
 WORKDIR /app
 # Copy the jar from the core module where the main application resides
-COPY --from=build /app/moment_forever_core/target/*.jar app.jar
+COPY --from=build /app/moment-forever-booking/target/*.jar app.jar
 EXPOSE 8080
 
 # Define the entrypoint command to run the Spring Boot application
