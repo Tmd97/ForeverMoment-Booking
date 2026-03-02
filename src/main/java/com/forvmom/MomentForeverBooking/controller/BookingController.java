@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/bookings")
+@RequestMapping("/admin")
 @Tag(name = "Booking Queries", description = "Endpoints for fetching booking history and details")
 public class BookingController {
 

@@ -4,7 +4,7 @@
 server:
   port: 8081
   servlet:
-    context-path: /api
+    context-path: /booking
     encoding:
       charset: UTF-8
       enabled: true
@@ -22,6 +22,19 @@ server:
 spring:
   application:
     name: moment-forever-booking
+
+    ###=============SERVICE DISCOVERY WITH CONSUL================
+  cloud:
+    consul:
+      host: localhost               # Consul server host (default localhost)
+      port: 8500                    # Consul server port
+      discovery:
+        enabled: true
+        register: true
+        service-name: ${spring.application.name}
+        health-check-path: /booking/actuator/health   # if you have actuator
+        health-check-interval: 10s
+        instance-id: ${spring.application.name}:${random.value}
 
   # --------- DATASOURCE ---------
   datasource:
