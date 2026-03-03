@@ -1,4 +1,4 @@
-package com.forvmom.MomentForeverBooking.dto.response;
+package com.forvmom.MomentForeverBooking.events;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

@@ -1,6 +1,6 @@
 package com.forvmom.MomentForeverBooking.consumer;
 
-import com.forvmom.MomentForeverBooking.dto.response.BookingRequestEvent;
+import com.forvmom.MomentForeverBooking.events.BookingRequestEvent;
 import com.forvmom.MomentForeverBooking.service.BookingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +35,6 @@ public class BookingRequestConsumer {
 
         try {
             bookingService.processBookingRequest(event);
-
             // Acknowledge after successful save + downstream event firing.
             ack.acknowledge();
             logger.info("Successfully processed booking-requested: bookingId={}", event.getBookingId());

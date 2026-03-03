@@ -85,10 +85,10 @@ public class BookingKafkaConfig {
         config.put(org.springframework.kafka.support.serializer.ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS,
                 JsonDeserializer.class);
 
-        config.put(JsonDeserializer.TRUSTED_PACKAGES, "com.forvmom.common.dto.events");
+        config.put(JsonDeserializer.TRUSTED_PACKAGES, "com.forvmom.MomentForeverBooking.events");
         // Also map the event type explicitly to avoid ClassNotFoundException if the
         // sender doesn't set type headers
-        config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.forvmom.common.dto.events.BookingRequestEvent");
+        config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.forvmom.MomentForeverBooking.events.BookingRequestEvent");
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 

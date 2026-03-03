@@ -1,15 +1,17 @@
-# ==============================
-# Server Configuration
-# ==============================
+# ==========================================================
+# SERVER CONFIGURATION
+# ==========================================================
 server:
   port: 8081
   forward-headers-strategy: framework
+
   servlet:
     context-path: /booking
     encoding:
       charset: UTF-8
       enabled: true
       force: true
+
   tomcat:
     connection-timeout: 30000
     max-connections: 200
@@ -17,27 +19,38 @@ server:
       max: 50
       min-spare: 5
 
-# ==============================
-# Spring Boot Configuration
-# ==============================
+
+# ==========================================================
+# SPRING BOOT CORE CONFIGURATION
+# ==========================================================
 spring:
+
+  # ----------------------------------------------------------
+  # APPLICATION INFO
+  # ----------------------------------------------------------
   application:
     name: moment-forever-booking
 
-    ###=============SERVICE DISCOVERY WITH CONSUL================
+
+  # ----------------------------------------------------------
+  # SERVICE DISCOVERY - CONSUL
+  # ----------------------------------------------------------
   cloud:
     consul:
-      host: localhost               # Consul server host (default localhost)
-      port: 8500                    # Consul server port
+      host: ${CONSUL_HOST:localhost}
+      port: 8500
       discovery:
         enabled: true
         register: true
         service-name: ${spring.application.name}
-        health-check-path: /booking/actuator/health   # if you have actuator
+        health-check-path: /booking/actuator/health
         health-check-interval: 10s
         instance-id: ${spring.application.name}:${random.value}
 
-  # --------- DATASOURCE ---------
+
+  # ----------------------------------------------------------
+  # DATABASE - POSTGRESQL
+  # ----------------------------------------------------------
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/moment_forver_book
     username: postgres
@@ -54,7 +67,10 @@ spring:
       connection-test-query: SELECT 1
       auto-commit: false
 
-  # --------- JPA / HIBERNATE ---------
+
+  # ----------------------------------------------------------
+  # JPA / HIBERNATE
+  # ----------------------------------------------------------
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
@@ -73,27 +89,48 @@ spring:
         id:
           new_generator_mappings: true
 
-  # --------- KAFKA ---------
+
+  # ----------------------------------------------------------
+  # KAFKA CONFIGURATION (SPRING BOOT OFFICIAL)
+  # ----------------------------------------------------------
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
 
-# ============================================
-# KAFKA TOPICS
-# ============================================
+    consumer:
+      group-id: booking-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+
+  # ==========================================================
+  # CUSTOM KAFKA TOPICS (YOUR OWN CONFIG)
+  # ==========================================================
+
 kafka:
   topics:
     booking-requested: topic_booking_requested
     booking-confirmed: topic_booking_confirmed
     booking-failed: topic_booking_failed
 
-  # --------- MONGODB ---------
+  # ----------------------------------------------------------
+  # MONGODB (MUST BE UNDER spring.data)
+  # ----------------------------------------------------------
   data:
     mongodb:
-      uri: mongodb://localhost:27017
+      uri: mongodb://${MONGO_HOST:localhost}:27017
       database: moment_forver_book
 
-  # --------- FILE UPLOAD ---------
+
+  # ----------------------------------------------------------
+  # FILE UPLOAD
+  # ----------------------------------------------------------
   servlet:
     multipart:
       enabled: true
@@ -101,7 +138,10 @@ kafka:
       max-request-size: 10MB
       file-size-threshold: 2KB
 
-  # --------- JACKSON ---------
+
+  # ----------------------------------------------------------
+  # JACKSON CONFIG
+  # ----------------------------------------------------------
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -112,16 +152,19 @@ kafka:
     time-zone: UTC
     default-property-inclusion: non_null
 
-# ==============================
-# Logging
-# ==============================
+
+# ==========================================================
+# LOGGING
+# ==========================================================
 logging:
   level:
     com.forvmom.MomentForeverBooking: DEBUG
 
-# ==============================
-# Custom App Config
-# ==============================
+
+
+# ==========================================================
+# CUSTOM APPLICATION CONFIG
+# ==========================================================
 app:
   base-url: http://localhost:8081
   file:
@@ -142,9 +185,11 @@ rate-limit:
     max-per-hour: 10
     max-per-ip: 50
 
-# ==============================
-# Actuator
-# ==============================
+
+
+# ==========================================================
+# ACTUATOR
+# ==========================================================
 management:
   endpoints:
     web:
@@ -156,9 +201,11 @@ management:
   probes:
     enabled: true
 
-# ==============================
-# Swagger
-# ==============================
+
+
+# ==========================================================
+# SWAGGER / OPENAPI
+# ==========================================================
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -166,9 +213,11 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
-# ==============================
-# Object Storage
-# ==============================
+
+
+# ==========================================================
+# OBJECT STORAGE
+# ==========================================================
 object:
   store:
     provider: gridfs
