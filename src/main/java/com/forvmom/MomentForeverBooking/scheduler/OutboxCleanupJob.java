@@ -1,5 +1,5 @@
 package com.forvmom.MomentForeverBooking.scheduler;
-import com.forvmom.MomentForeverBooking.service.impl.OutboxCleanupService;
+import com.forvmom.MomentForeverBooking.service.OutboxCleanupService;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;

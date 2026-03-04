@@ -222,3 +222,6 @@ kafka:
     booking-requested: topic_booking_requested
     booking-confirmed: topic_booking_confirmed
     booking-failed: topic_booking_failed
+    payment-requested: topic_payment_requested
+    payment-confirmed: topic_payment_confirmed
+    payment-failed: topic_payment_failed

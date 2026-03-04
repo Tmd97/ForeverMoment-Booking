@@ -1,6 +1,7 @@
 package com.forvmom.MomentForeverBooking.config;
 import com.forvmom.MomentForeverBooking.scheduler.OutboxCleanupJob;
 import com.forvmom.MomentForeverBooking.scheduler.OutboxRetriesJob;
+import com.forvmom.MomentForeverBooking.scheduler.OutgoingOutboxPublisherJob;
 import org.quartz.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -54,6 +55,30 @@ public class QuartzConfig {
                 .forJob(outboxRetryJobDetail())
                 .withIdentity("outboxRetryTrigger")
                 .withDescription("Retries failed/unprocessed outbox records older than 5 minutes")
+                .withSchedule(scheduleBuilder)
+                .build();
+    }
+
+    /// //////////out going events triggers////////////////////////////
+
+    @Bean
+    public JobDetail outgoingOutboxPublisherJobDetail() {
+        return JobBuilder.newJob(OutgoingOutboxPublisherJob.class)
+                .withIdentity("outgoingOutboxPublisherJob")
+                .storeDurably()
+                .build();
+    }
+
+    @Bean
+    public Trigger outgoingOutboxPublisherTrigger() {
+        SimpleScheduleBuilder scheduleBuilder = SimpleScheduleBuilder.simpleSchedule()
+                .withIntervalInSeconds(30)   // runs every 30 seconds
+                .repeatForever()
+                .withMisfireHandlingInstructionFireNow();
+
+        return TriggerBuilder.newTrigger()
+                .forJob(outgoingOutboxPublisherJobDetail())
+                .withIdentity("outgoingOutboxPublisherTrigger")
                 .withSchedule(scheduleBuilder)
                 .build();
     }

@@ -7,6 +7,11 @@ public class PaymentRequestedEvent {
 
     private String bookingId;
     private Long userId;
+    private Long experienceId;
+    private Long timeSlotMapperId;
+    private String experienceName;
+    private int guestCount;
+
     private String userEmail;
     private BigDecimal grandTotal;
     private String currency;
@@ -75,5 +80,37 @@ public class PaymentRequestedEvent {
 
     public void setRequestedAt(LocalDateTime requestedAt) {
         this.requestedAt = requestedAt;
+    }
+
+    public Long getExperienceId() {
+        return experienceId;
+    }
+
+    public void setExperienceId(Long experienceId) {
+        this.experienceId = experienceId;
+    }
+
+    public Long getTimeSlotMapperId() {
+        return timeSlotMapperId;
+    }
+
+    public void setTimeSlotMapperId(Long timeSlotMapperId) {
+        this.timeSlotMapperId = timeSlotMapperId;
+    }
+
+    public String getExperienceName() {
+        return experienceName;
+    }
+
+    public void setExperienceName(String experienceName) {
+        this.experienceName = experienceName;
+    }
+
+    public int getGuestCount() {
+        return guestCount;
+    }
+
+    public void setGuestCount(int guestCount) {
+        this.guestCount = guestCount;
     }
 }
