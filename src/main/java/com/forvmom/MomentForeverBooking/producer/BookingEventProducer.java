@@ -1,39 +1,44 @@
 package com.forvmom.MomentForeverBooking.producer;
 
-import com.forvmom.MomentForeverBooking.events.BookingConfirmedEvent;
-import com.forvmom.MomentForeverBooking.events.BookingFailedEvent;
-import com.forvmom.MomentForeverBooking.events.PaymentRequestedEvent;
+import com.forvmom.MomentForeverBooking.events.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-/**
- * Publishes outbound events from the Booking Service.
- */
-@Service
+@Component
 public class BookingEventProducer {
 
     private static final Logger logger = LoggerFactory.getLogger(BookingEventProducer.class);
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
+    @Value("${kafka.topics.booking-confirmed}")
+    private String bookingConfirmedTopic;
+
+    @Value("${kafka.topics.booking-failed}")
+    private String bookingFailedTopic;
+
     public BookingEventProducer(KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    public void sendPaymentRequested(PaymentRequestedEvent event) {
-        logger.info("Publishing payment-requested event for bookingId={}", event.getBookingId());
-        kafkaTemplate.send("payment-requested", String.valueOf(event.getBookingId()), event);
-    }
 
     public void sendBookingConfirmed(BookingConfirmedEvent event) {
-        logger.info("Publishing booking-confirmed event for bookingId={}", event.getBookingId());
-        kafkaTemplate.send("booking-confirmed", String.valueOf(event.getBookingId()), event);
+        kafkaTemplate.send(bookingConfirmedTopic, event.getBookingId(), event);
+        logger.info("Sent BookingConfirmedEvent: bookingId={}", event.getBookingId());
     }
 
+
     public void sendBookingFailed(BookingFailedEvent event) {
-        logger.info("Publishing booking-failed event for bookingId={}", event.getBookingId());
-        kafkaTemplate.send("booking-failed", String.valueOf(event.getBookingId()), event);
+        kafkaTemplate.send(bookingFailedTopic, event.getBookingId(), event);
+        logger.info("Sent BookingFailedEvent: bookingId={}", event.getBookingId());
     }
+
+//    @Override
+//    public void sendInventoryReleaseRequested(InventoryReleaseRequestedEvent event) {
+//        kafkaTemplate.send(inventoryReleaseTopic, event.getBookingId(), event);
+//        logger.info("Sent InventoryReleaseRequestedEvent: bookingId={}", event.getBookingId());
+//    }
 }

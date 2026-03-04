@@ -3,7 +3,6 @@ package com.forvmom.MomentForeverBooking.service.impl;
 import com.forvmom.MomentForeverBooking.events.BookingConfirmedEvent;
 import com.forvmom.MomentForeverBooking.events.BookingFailedEvent;
 import com.forvmom.MomentForeverBooking.events.BookingRequestEvent;
-import com.forvmom.MomentForeverBooking.events.PaymentRequestedEvent;
 import com.forvmom.MomentForeverBooking.domain.entity.Booking;
 import com.forvmom.MomentForeverBooking.domain.entity.BookingAddon;
 import com.forvmom.MomentForeverBooking.domain.enums.BookingStatus;
@@ -26,6 +25,8 @@ import java.time.LocalDateTime;
 public class BookingServiceImpl implements BookingService {
 
     private static final Logger logger = LoggerFactory.getLogger(BookingServiceImpl.class);
+
+
 
     private final BookingRepository bookingRepository;
     private final BookingEventProducer bookingEventProducer;
@@ -82,25 +83,9 @@ public class BookingServiceImpl implements BookingService {
                 booking.addAddon(addon);
             }
         }
-
         // 2. Persist booking locally
         bookingRepository.save(booking);
         logger.info("Persisted PENDING booking: bookingId={}", booking.getBookingId());
-
-        // 3. Publish payment requested event
-        PaymentRequestedEvent paymentEvent = new PaymentRequestedEvent();
-        paymentEvent.setBookingId(booking.getBookingId());
-        paymentEvent.setUserId(booking.getUserId());
-        paymentEvent.setUserEmail(booking.getUserEmail());
-        paymentEvent.setGrandTotal(booking.getGrandTotal());
-        paymentEvent.setCurrency("INR");
-        paymentEvent.setRequestedAt(LocalDateTime.now());
-
-        logger.info("Publishing payment-requested for bookingId={}, amount={}, currency={} ",
-                paymentEvent.getBookingId(), paymentEvent.getGrandTotal(), paymentEvent.getCurrency());
-
-
-        bookingEventProducer.sendPaymentRequested(paymentEvent);
     }
 
     @Override
