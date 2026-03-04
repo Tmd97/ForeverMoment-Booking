@@ -9,6 +9,7 @@ import com.forvmom.MomentForeverBooking.domain.entity.BookingAddon;
 import com.forvmom.MomentForeverBooking.domain.enums.BookingStatus;
 import com.forvmom.MomentForeverBooking.domain.enums.PricingLevel;
 import com.forvmom.MomentForeverBooking.exception.BookingNotFoundException;
+import com.forvmom.MomentForeverBooking.exception.BookingStatusConflictException;
 import com.forvmom.MomentForeverBooking.producer.BookingEventProducer;
 import com.forvmom.MomentForeverBooking.repository.BookingRepository;
 import com.forvmom.MomentForeverBooking.service.BookingService;
@@ -52,7 +53,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setUserFullName(event.getUserFullName());
         booking.setExperienceId(event.getExperienceId());
         booking.setExperienceName(event.getExperienceName());
-        booking.setExperienceSlug(event.getExperienceSlug());
+        // booking.setExperienceSlug(event.getExperienceSlug());
         booking.setLocationId(event.getLocationId());
         booking.setLocationName(event.getLocationName());
         booking.setTimeSlotMapperId(event.getTimeSlotMapperId());
@@ -116,6 +117,13 @@ public class BookingServiceImpl implements BookingService {
         if (booking.getStatus() == BookingStatus.CONFIRMED)
             return;
 
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new BookingStatusConflictException(bookingId, booking.getStatus().name(), "confirm");
+        }
+        if (booking.getStatus() == BookingStatus.FAILED) {
+            throw new BookingStatusConflictException(bookingId, booking.getStatus().name(), "confirm");
+        }
+
         booking.setStatus(BookingStatus.CONFIRMED);
         booking.setConfirmedAt(LocalDateTime.now());
         bookingRepository.save(booking);
@@ -163,7 +171,10 @@ public class BookingServiceImpl implements BookingService {
     public void cancelBooking(String bookingId) {
         Booking booking = getBookingByBookingId(bookingId);
         if (booking.getStatus() == BookingStatus.CANCELLED)
-            return;
+            return; // idempotent — already cancelled, ignore gracefully
+        if (booking.getStatus() == BookingStatus.CONFIRMED) {
+            throw new BookingStatusConflictException(bookingId, booking.getStatus().name(), "cancel");
+        }
 
         // Cancellation policies could be evaluated here before updating
         booking.setStatus(BookingStatus.CANCELLED);
