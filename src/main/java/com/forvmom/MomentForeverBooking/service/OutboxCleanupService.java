@@ -9,6 +9,7 @@ import com.forvmom.MomentForeverBooking.repository.BookingOutboxDao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,6 +27,7 @@ public class OutboxCleanupService {
     }
 
     // Cleanup old PROCESSED records
+    @Transactional
     public void cleanupPublishedRecords() {
         LocalDateTime cutoff = LocalDateTime.now().minusHours(HOURS_TO_KEEP);
         int deleted = outboxDao.deleteByStatusAndUpdatedAtBefore(BookingOutbox.STATUS_PROCESSED, cutoff);
