@@ -57,15 +57,18 @@ spring:
     password: groote
     driver-class-name: org.postgresql.Driver
 
-    hikari:
-      pool-name: MomentForever-HikariPool
-      connection-timeout: 30000
-      maximum-pool-size: 20
-      minimum-idle: 5
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      connection-test-query: SELECT 1
-      auto-commit: false
+  # ----------------------------------------------------------
+  # HIKARI CONNECTION POOL
+  # ----------------------------------------------------------
+  hikari:
+    pool-name: MomentForeverBooking-HikariPool
+    connection-timeout: 30000
+    maximum-pool-size: 20
+    minimum-idle: 5
+    idle-timeout: 600000
+    max-lifetime: 1800000
+    connection-test-query: SELECT 1
+    auto-commit: false
 
 
   # ----------------------------------------------------------
@@ -91,7 +94,7 @@ spring:
 
 
   # ----------------------------------------------------------
-  # KAFKA CONFIGURATION (SPRING BOOT OFFICIAL)
+  # KAFKA CONFIGURATION
   # ----------------------------------------------------------
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
@@ -109,18 +112,9 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
 
-  # ==========================================================
-  # CUSTOM KAFKA TOPICS (YOUR OWN CONFIG)
-  # ==========================================================
-
-kafka:
-  topics:
-    booking-requested: topic_booking_requested
-    booking-confirmed: topic_booking_confirmed
-    booking-failed: topic_booking_failed
 
   # ----------------------------------------------------------
-  # MONGODB (MUST BE UNDER spring.data)
+  # MONGODB
   # ----------------------------------------------------------
   data:
     mongodb:
@@ -161,7 +155,6 @@ logging:
     com.forvmom.MomentForeverBooking: DEBUG
 
 
-
 # ==========================================================
 # CUSTOM APPLICATION CONFIG
 # ==========================================================
@@ -186,7 +179,6 @@ rate-limit:
     max-per-ip: 50
 
 
-
 # ==========================================================
 # ACTUATOR
 # ==========================================================
@@ -202,7 +194,6 @@ management:
     enabled: true
 
 
-
 # ==========================================================
 # SWAGGER / OPENAPI
 # ==========================================================
@@ -214,7 +205,6 @@ springdoc:
     path: /v3/api-docs
 
 
-
 # ==========================================================
 # OBJECT STORAGE
 # ==========================================================
@@ -222,3 +212,13 @@ object:
   store:
     provider: gridfs
     gridfs-bucket: fs
+
+
+# ==========================================================
+# CUSTOM KAFKA TOPICS
+# ==========================================================
+kafka:
+  topics:
+    booking-requested: topic_booking_requested
+    booking-confirmed: topic_booking_confirmed
+    booking-failed: topic_booking_failed
