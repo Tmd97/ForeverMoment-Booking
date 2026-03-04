@@ -28,7 +28,7 @@ public class BookingRequestConsumer {
         this.bookingService = bookingService;
     }
 
-    @KafkaListener(topics = "${kafka.topics.booking-requested:booking-requested}", groupId = "booking-group", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "${kafka.topics.booking-requested}", groupId = "booking-group", containerFactory = "kafkaListenerContainerFactory")
     public void onBookingRequested(@Payload BookingRequestEvent event, Acknowledgment ack) {
         logger.info("Received booking-requested: bookingId={}, userId={}",
                 event.getBookingId(), event.getUserId());

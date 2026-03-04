@@ -52,7 +52,7 @@ spring:
   # DATABASE - POSTGRESQL
   # ----------------------------------------------------------
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/moment_forver_book
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/moment_forever_book
     username: postgres
     password: groote
     driver-class-name: org.postgresql.Driver

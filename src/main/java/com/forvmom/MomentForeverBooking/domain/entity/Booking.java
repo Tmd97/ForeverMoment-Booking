@@ -46,7 +46,7 @@ public class Booking {
     @Column(name = "experience_name", nullable = false, length = 255)
     private String experienceName;
 
-    @Column(name = "experience_slug", nullable = false, length = 255)
+    @Column(name = "experience_slug")
     private String experienceSlug;
 
     @Column(name = "location_id")

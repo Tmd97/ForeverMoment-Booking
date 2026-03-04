@@ -96,6 +96,10 @@ public class BookingServiceImpl implements BookingService {
         paymentEvent.setCurrency("INR");
         paymentEvent.setRequestedAt(LocalDateTime.now());
 
+        logger.info("Publishing payment-requested for bookingId={}, amount={}, currency={} ",
+                paymentEvent.getBookingId(), paymentEvent.getGrandTotal(), paymentEvent.getCurrency());
+
+
         bookingEventProducer.sendPaymentRequested(paymentEvent);
     }
 

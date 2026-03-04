@@ -75,6 +75,8 @@ public class BookingKafkaConfig {
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ConsumerConfig.GROUP_ID_CONFIG, "booking-group");
 
+        // Wrap with ErrorHandlingDeserializer so deserialisation errors don't
+        // crash the listener thread — they become ErrorHandlingDeserializer.Value
         config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
                 org.springframework.kafka.support.serializer.ErrorHandlingDeserializer.class);
         config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
@@ -85,10 +87,26 @@ public class BookingKafkaConfig {
         config.put(org.springframework.kafka.support.serializer.ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS,
                 JsonDeserializer.class);
 
-        config.put(JsonDeserializer.TRUSTED_PACKAGES, "com.forvmom.MomentForeverBooking.events");
-        // Also map the event type explicitly to avoid ClassNotFoundException if the
-        // sender doesn't set type headers
-        config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.forvmom.MomentForeverBooking.events.BookingRequestEvent");
+        // ── Type resolution ───────────────────────────────────────────────────
+        // The platform (core) publishes with header __TypeId__ set to:
+        // com.forvmom.common.dto.events.BookingRequestEvent
+        //
+        // This service has its own mirror copy of that class at:
+        // com.forvmom.MomentForeverBooking.events.BookingRequestEvent
+        //
+        // TYPE_MAPPINGS tells SpringDoc: "when you see the platform's type
+        // header value, deserialise into OUR local class instead".
+        // This avoids a ClassNotFoundException and removes the coupling of
+        // having to share the commons JAR with the booking service.
+        config.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+        config.put(JsonDeserializer.TYPE_MAPPINGS,
+                "com.forvmom.common.dto.events.BookingRequestEvent:" +
+                        "com.forvmom.MomentForeverBooking.events.BookingRequestEvent");
+
+        // Use the __TypeId__ header for type resolution (default true, but
+        // being explicit to document intent)
+        config.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, true);
+
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
