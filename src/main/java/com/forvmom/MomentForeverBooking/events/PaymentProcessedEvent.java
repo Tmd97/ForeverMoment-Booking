@@ -1,5 +1,7 @@
 package com.forvmom.MomentForeverBooking.events;
 
+import org.springframework.stereotype.Component;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -8,19 +10,26 @@ import java.time.LocalDateTime;
  * Consumed by
  * {@link com.forvmom.MomentForeverBooking.consumer.PaymentProcessedConsumer}.
  */
-public class PaymentProcessedEvent {
+@Component
+public class PaymentProcessedEvent implements InboundEvent {
 
     private String bookingId;
     private String transactionId;
     private BigDecimal amountPaid;
     private String currency;
     private LocalDateTime paidAt;
+    private String eventType = "PaymentProcessedEvent";
 
     public PaymentProcessedEvent() {
     }
 
     public String getBookingId() {
         return bookingId;
+    }
+
+    @Override
+    public String getEventType() {
+        return eventType;
     }
 
     public void setBookingId(String bookingId) {

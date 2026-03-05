@@ -11,6 +11,7 @@ import com.forvmom.MomentForeverBooking.repository.OutgoingOutboxDao;
 import com.forvmom.MomentForeverBooking.utils.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,18 +47,22 @@ public class OutgoingOutboxPublisher {
     private final BookingEventProducer eventProducer;
     private final ObjectMapper objectMapper;
     private final AlertService alertService;
-    private final OutgoingOutboxService outboxService;
+    private final OutgoingOutboxService outgoingOutboxService;
+
+
+    @Autowired
+    private BookingService bookingService;
 
     public OutgoingOutboxPublisher(OutgoingOutboxDao outgoingOutboxDao,
-            BookingEventProducer eventProducer,
-            ObjectMapper objectMapper,
-            AlertService alertService,
-            OutgoingOutboxService outboxService) {
+                                   BookingEventProducer eventProducer,
+                                   ObjectMapper objectMapper,
+                                   AlertService alertService,
+                                   OutgoingOutboxService outgoingOutboxService) {
         this.outgoingOutboxDao = outgoingOutboxDao;
         this.eventProducer = eventProducer;
         this.objectMapper = objectMapper;
         this.alertService = alertService;
-        this.outboxService = outboxService;
+        this.outgoingOutboxService = outgoingOutboxService;
     }
 
     // ── Immediate publish (called by consumers, outside TX) ───────────────────
@@ -80,7 +85,7 @@ public class OutgoingOutboxPublisher {
             return; // idempotent caller may pass null on duplicate
         try {
             sendToKafka(record);
-            outboxService.markAsSent(record);
+            outgoingOutboxService.markAsSent(record);
             log.info("Immediate publish succeeded: outboxId={}, type={}, bookingId={}",
                     record.getId(), record.getEventType(), record.getBookingId());
         } catch (Exception e) {
@@ -137,29 +142,26 @@ public class OutgoingOutboxPublisher {
                 continue;
             }
             try {
+                outgoingOutboxService.incrementRetry(record);
                 sendToKafka(record);
-                outboxService.markAsSent(record);
+                outgoingOutboxService.markAsSent(record);
                 log.info("Quartz retry succeeded: id={}, type={}, bookingId={}",
                         record.getId(), record.getEventType(), record.getBookingId());
             } catch (Exception e) {
                 log.error("Quartz retry failed: id={}, type={}, bookingId={}: {}",
                         record.getId(), record.getEventType(), record.getBookingId(), e.getMessage());
-                outboxService.incrementRetry(record);
             }
         }
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    public void reprocessOutGoingEvent(OutgoingOutboxRecord outbox) {
-
-    }
-
     private void sendToKafka(OutgoingOutboxRecord record) throws Exception {
         String type = record.getEventType();
         String json = record.getPayload();
 
         switch (type) {
+
             case BookingServiceImpl.EVT_PAYMENT_REQUESTED -> {
                 PaymentRequestedEvent event = objectMapper.readValue(json, PaymentRequestedEvent.class);
                 eventProducer.sendPaymentRequestedEvent(event);
@@ -177,7 +179,7 @@ public class OutgoingOutboxPublisher {
     }
 
     private void handleDeadRecord(OutgoingOutboxRecord record) {
-        outboxService.markAsDead(record);
+        outgoingOutboxService.markAsDead(record);
         String msg = String.format(
                 "Outgoing outbox record id=%d type=%s bookingId=%s moved to DEAD after %d retries",
                 record.getId(), record.getEventType(), record.getBookingId(), MAX_RETRIES);

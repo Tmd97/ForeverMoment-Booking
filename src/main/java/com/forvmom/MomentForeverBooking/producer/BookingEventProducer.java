@@ -3,7 +3,6 @@ package com.forvmom.MomentForeverBooking.producer;
 import com.forvmom.MomentForeverBooking.events.BookingConfirmedEvent;
 import com.forvmom.MomentForeverBooking.events.BookingFailedEvent;
 import com.forvmom.MomentForeverBooking.events.PaymentRequestedEvent;
-import com.forvmom.MomentForeverBooking.producer.BookingEventProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

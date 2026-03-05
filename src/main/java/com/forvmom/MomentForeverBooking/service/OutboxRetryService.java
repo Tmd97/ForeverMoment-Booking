@@ -1,8 +1,10 @@
 package com.forvmom.MomentForeverBooking.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.forvmom.MomentForeverBooking.domain.entity.BookingOutbox;
 import com.forvmom.MomentForeverBooking.domain.entity.OutgoingOutboxRecord;
-import com.forvmom.MomentForeverBooking.events.BookingRequestEvent;
+import com.forvmom.MomentForeverBooking.events.*;
+import com.forvmom.MomentForeverBooking.producer.BookingEventProducer;
 import com.forvmom.MomentForeverBooking.repository.BookingOutboxDao;
 import com.forvmom.MomentForeverBooking.repository.OutgoingOutboxDao;
 import com.forvmom.MomentForeverBooking.utils.JsonUtils;
@@ -54,14 +56,18 @@ public class OutboxRetryService {
     private final OutgoingOutboxService outgoingOutboxService;
     private final OutgoingOutboxPublisher outgoingOutboxPublisher;
     private final BookingService bookingService;
+    private final BookingEventProducer bookingEventProducer;
+    private final ObjectMapper objectMapper;
 
     public OutboxRetryService(BookingOutboxDao outboxDao,
-            OutboxService outboxService,
-            OutboxDeadLetterHandler deadLetterHandler,
-            OutgoingOutboxDao outgoingOutboxDao,
-            OutgoingOutboxService outgoingOutboxService,
-            OutgoingOutboxPublisher outgoingOutboxPublisher,
-            BookingService bookingService) {
+                              OutboxService outboxService,
+                              OutboxDeadLetterHandler deadLetterHandler,
+                              OutgoingOutboxDao outgoingOutboxDao,
+                              OutgoingOutboxService outgoingOutboxService,
+                              OutgoingOutboxPublisher outgoingOutboxPublisher,
+                              BookingService bookingService,
+                              BookingEventProducer bookingEventProducer,
+                              ObjectMapper objectMapper) {
         this.outboxDao = outboxDao;
         this.outboxService = outboxService;
         this.deadLetterHandler = deadLetterHandler;
@@ -69,6 +75,40 @@ public class OutboxRetryService {
         this.outgoingOutboxService = outgoingOutboxService;
         this.outgoingOutboxPublisher = outgoingOutboxPublisher;
         this.bookingService = bookingService;
+        this.bookingEventProducer = bookingEventProducer;
+        this.objectMapper = objectMapper;
+    }
+
+    private void handlePaymentFailed(BookingOutbox outbox, String bookingId) {
+        // ── Branch A: Outgoing record already exists (common case)
+        // ────────────────────
+        // The @Transactional method committed: booking + outgoing record are both in
+        // DB.
+        // Only the Kafka publish failed. Re-publish directly — NO transaction opened.
+        Optional<OutgoingOutboxRecord> existingOutgoing = outgoingOutboxDao.findByBookingIdAndEventType(
+                bookingId, BookingServiceImpl.EVT_PAYMENT_FAILED);
+
+        if (existingOutgoing.isPresent()) {
+            OutgoingOutboxRecord record = existingOutgoing.get();
+            if (OutgoingOutboxRecord.STATUS_SENT.equals(record.getStatus())) {
+                log.info("[Branch-A] booking-requested already SENT for bookingId={} — nothing to do", bookingId);
+                return;
+            }
+            log.info("[Branch-A] Re-publishing existing outbox record id={} (status={}) for bookingId={}",
+                    record.getId(), record.getStatus(), bookingId);
+            outgoingOutboxPublisher.trySinglePublish(record); // zero DB transaction
+            return;
+        }
+
+        // ── Branch B: Nothing in DB (transaction rolled back entirely) ───────────────
+        // Re-run the full processBookingRequest() — it creates booking + outgoing
+        // record
+        // atomically, then we immediately try the Kafka publish.
+        log.info("[Branch-B] No outgoing record for bookingId={} — re-running processBookingRequest()", bookingId);
+        BookingRequestEvent event = JsonUtils.fromJson(outbox.getPayload(), BookingRequestEvent.class);
+        OutgoingOutboxRecord newRecord = bookingService.failBooking(event.getBookingId(), "Payment failed");
+        // Immediate publish attempt outside the processBookingRequest() transaction
+        outgoingOutboxPublisher.trySinglePublish(newRecord);
     }
 
     /**
@@ -84,7 +124,7 @@ public class OutboxRetryService {
         // re-publish, no enrichment needed as it is already enriched before
 
         List<BookingOutbox> stuck = outboxDao.findByStatusInAndUpdatedAtBefore(
-                List.of(BookingOutbox.STATUS_PROCESSING, BookingOutbox.STATUS_FAILED),
+                List.of(BookingOutbox.STATUS_PROCESSING, BookingOutbox.STATUS_FAILED, BookingOutbox.PENDING),
                 cutoff);
 
         if (!stuck.isEmpty()) {
@@ -100,7 +140,27 @@ public class OutboxRetryService {
                 outboxService.incrementRetry(outbox);
                 // inbound request events get processed(payment request event publish)
                 // is part of it as whole inbound
-                reprocessEvent(outbox);
+                String bookingId = outbox.getBookingReferenceId();
+                String eventType = outbox.getEventType();
+
+                // Delegate to the appropriate handler based on event type
+                switch (eventType) {
+                    case BookingServiceImpl.EVT_BOOKING_REQUESTED:
+                        handleBookingRequested(outbox, bookingId);
+                        break;
+                    case BookingServiceImpl.EVT_PAYMENT_PROCESSED:
+                        handlePaymentProcessed(outbox, bookingId);
+                        break;
+                    case BookingServiceImpl.EVT_PAYMENT_FAILED:
+                        handlePaymentFailed(outbox, bookingId);
+                        break;
+
+                    default:
+                        log.warn("No retry handler for event type: {}", eventType);
+                        outboxService.markAsFailed(outbox);
+                        continue; // skip marking as processed
+                }
+
                 outboxService.markAsProcessed(outbox);
                 log.info("Retry succeeded for incoming outbox id={}, booking={}",
                         outbox.getId(), outbox.getBookingReferenceId());
@@ -112,16 +172,30 @@ public class OutboxRetryService {
         }
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
+    private void handlePaymentProcessed(BookingOutbox outbox, String bookingId) {
+        Optional<OutgoingOutboxRecord> existingOutgoing = outgoingOutboxDao.findByBookingIdAndEventType(
+                bookingId, BookingServiceImpl.EVT_BOOKING_CONFIRMED);
 
-    private void reprocessEvent(BookingOutbox outbox) throws Exception {
-        if (!"BOOKING_REQUESTED".equals(outbox.getEventType())) {
-            log.warn("No retry handler for incoming event type: {}", outbox.getEventType());
+        if (existingOutgoing.isPresent()) {
+            OutgoingOutboxRecord record = existingOutgoing.get();
+            if (OutgoingOutboxRecord.STATUS_SENT.equals(record.getStatus())) {
+                log.info("[Branch-A] booking-confirmed already SENT for bookingId={} — nothing to do", bookingId);
+                return;
+            }
+            log.info("[Branch-A] Re-publishing existing outbox record id={} (status={}) for bookingId={}",
+                    record.getId(), record.getStatus(), bookingId);
+            outgoingOutboxPublisher.trySinglePublish(record); // zero DB transaction
             return;
         }
 
-        String bookingId = outbox.getBookingReferenceId();
+        log.info("[Branch-B] No outgoing record for bookingId={} — re-running processBookingRequest()", bookingId);
+        BookingRequestEvent event = JsonUtils.fromJson(outbox.getPayload(), BookingRequestEvent.class);
+        OutgoingOutboxRecord newRecord = bookingService.confirmBooking(event.getBookingId());
+        // Immediate publish attempt outside the processBookingRequest() transaction
+        outgoingOutboxPublisher.trySinglePublish(newRecord);
+    }
 
+    private void handleBookingRequested(BookingOutbox outbox, String bookingId) {
         // ── Branch A: Outgoing record already exists (common case)
         // ────────────────────
         // The @Transactional method committed: booking + outgoing record are both in

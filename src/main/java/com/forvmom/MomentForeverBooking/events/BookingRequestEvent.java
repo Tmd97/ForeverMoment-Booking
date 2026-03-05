@@ -1,11 +1,14 @@
 package com.forvmom.MomentForeverBooking.events;
 
+import org.springframework.stereotype.Component;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public class BookingRequestEvent {
+@Component
+public class BookingRequestEvent implements InboundEvent {
     private String bookingId;
     private Long userId;
     private String userEmail;
@@ -31,12 +34,18 @@ public class BookingRequestEvent {
     private BigDecimal addonsTotal;
     private BigDecimal grandTotal;
     private LocalDateTime requestedAt;
+    private String eventType = "BookingRequestEvent";
 
     public BookingRequestEvent() {
     }
 
     public String getBookingId() {
         return this.bookingId;
+    }
+
+    @Override
+    public String getEventType() {
+        return eventType;
     }
 
     public void setBookingId(String bookingId) {
@@ -282,5 +291,7 @@ public class BookingRequestEvent {
         public void setFree(boolean free) {
             this.free = free;
         }
+
+
     }
 }

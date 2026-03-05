@@ -1,8 +1,10 @@
 package com.forvmom.MomentForeverBooking.consumer;
 
+import com.forvmom.MomentForeverBooking.domain.entity.BookingOutbox;
 import com.forvmom.MomentForeverBooking.domain.entity.OutgoingOutboxRecord;
 import com.forvmom.MomentForeverBooking.events.PaymentProcessedEvent;
 import com.forvmom.MomentForeverBooking.service.BookingService;
+import com.forvmom.MomentForeverBooking.service.OutboxService;
 import com.forvmom.MomentForeverBooking.service.OutgoingOutboxPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,11 +43,13 @@ public class PaymentProcessedConsumer {
 
     private final BookingService bookingService;
     private final OutgoingOutboxPublisher outgoingOutboxPublisher;
+    private final OutboxService outboxService;
 
     public PaymentProcessedConsumer(BookingService bookingService,
-            OutgoingOutboxPublisher outgoingOutboxPublisher) {
+                                    OutgoingOutboxPublisher outgoingOutboxPublisher, OutboxService outboxService) {
         this.bookingService = bookingService;
         this.outgoingOutboxPublisher = outgoingOutboxPublisher;
+        this.outboxService = outboxService;
     }
 
     @KafkaListener(topics = "${kafka.topics.payment-confirmed}", groupId = "booking-group", containerFactory = "kafkaListenerContainerFactory")
@@ -53,7 +57,9 @@ public class PaymentProcessedConsumer {
         String bookingId = event.getBookingId();
         log.info("Received payment-processed: bookingId={}, transactionId={}", bookingId, event.getTransactionId());
 
-        // ACK immediately — Quartz outbox handles any downstream failure
+        // Step 1: Idempotency guard — find or create incoming outbox record
+        BookingOutbox outbox = outboxService.findOrCreateForEvent(event);
+        // ACK immediately
         ack.acknowledge();
 
         try {

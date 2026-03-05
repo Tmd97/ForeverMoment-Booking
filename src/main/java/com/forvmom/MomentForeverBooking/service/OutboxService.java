@@ -1,35 +1,48 @@
 package com.forvmom.MomentForeverBooking.service;
 
 import com.forvmom.MomentForeverBooking.domain.entity.BookingOutbox;
-import com.forvmom.MomentForeverBooking.events.BookingRequestEvent;
+import com.forvmom.MomentForeverBooking.events.InboundEvent;
 import com.forvmom.MomentForeverBooking.repository.BookingOutboxDao;
 import com.forvmom.MomentForeverBooking.utils.JsonUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class OutboxService {
-    private final BookingOutboxDao outboxDao;
 
-    public OutboxService(BookingOutboxDao outboxDao) {
+    private final BookingOutboxDao outboxDao;
+    private final Map<String, InboundEvent> creatorMap;
+
+    public OutboxService(BookingOutboxDao outboxDao, List<InboundEvent> inboundEventList) {
         this.outboxDao = outboxDao;
+        this.creatorMap = inboundEventList.stream()
+                .collect(Collectors.toMap(InboundEvent::getEventType, e -> e));
     }
 
     @Transactional
-    public BookingOutbox findOrCreateForEvent(BookingRequestEvent event) {
-        String bookingId = event.getBookingId();
-        Optional<BookingOutbox> existing = outboxDao.findByBookingReferenceId(bookingId);
-        return existing.orElseGet(() -> createNewOutbox(event));
+    public BookingOutbox findOrCreateForEvent(InboundEvent event) {
+        Optional<BookingOutbox> existing = outboxDao.findByBookingReferenceId(event.getBookingId());
+        if (existing.isPresent()) {
+            return existing.get();
+        } else {
+            return createNewOutbox(event);
+        }
+
     }
 
-    private BookingOutbox createNewOutbox(BookingRequestEvent event) {
+    private BookingOutbox createNewOutbox(InboundEvent event) {
         BookingOutbox outbox = new BookingOutbox();
         outbox.setBookingReferenceId(event.getBookingId());
-        outbox.setEventType("BOOKING_REQUESTED");
-        outbox.setStatus(BookingOutbox.STATUS_NEW);
+        outbox.setEventType(event.getEventType());
+        outbox.setStatus(BookingOutbox.PENDING);
         outbox.setRetryCount(0);
         outbox.setPayload(JsonUtils.toJson(event));
         return outboxDao.save(outbox);

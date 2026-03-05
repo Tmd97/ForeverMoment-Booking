@@ -16,6 +16,7 @@ public class BookingOutbox {
     public static final String STATUS_PROCESSED = "PROCESSED";
     public static final String STATUS_FAILED = "FAILED";
     public static final String STATUS_DEAD = "DEAD";
+    public static final String PENDING = "PENDING";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

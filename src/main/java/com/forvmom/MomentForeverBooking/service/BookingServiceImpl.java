@@ -48,6 +48,10 @@ import java.time.LocalDateTime;
 @Service
 public class BookingServiceImpl implements BookingService {
 
+    public static final String EVT_PAYMENT_FAILED = "PAYMENT_FAILED";
+    public static final String EVT_PAYMENT_PROCESSED = "PAYMENT_PROCESSED";
+    public static final String EVT_BOOKING_REQUESTED = "BOOKING_REQUESTED";
+
     private static final Logger log = LoggerFactory.getLogger(BookingServiceImpl.class);
 
     // Event-type constants shared with OutgoingOutboxPublisher for routing

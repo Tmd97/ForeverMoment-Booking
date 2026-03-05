@@ -3,7 +3,7 @@ package com.forvmom.MomentForeverBooking.events;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public class PaymentRequestedEvent {
+public class PaymentRequestedEvent implements OutboundEvent {
 
     private String bookingId;
     private Long userId;

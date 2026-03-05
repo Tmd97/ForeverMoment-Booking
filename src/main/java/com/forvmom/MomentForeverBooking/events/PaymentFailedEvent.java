@@ -1,5 +1,7 @@
 package com.forvmom.MomentForeverBooking.events;
 
+import org.springframework.stereotype.Component;
+
 import java.time.LocalDateTime;
 
 /**
@@ -7,18 +9,25 @@ import java.time.LocalDateTime;
  * Consumed by
  * {@link com.forvmom.MomentForeverBooking.consumer.PaymentFailedConsumer}.
  */
-public class PaymentFailedEvent {
+@Component
+public class PaymentFailedEvent implements InboundEvent {
 
     private String bookingId;
     private String failureReason;
     private String errorCode;
     private LocalDateTime failedAt;
+    private String eventType = "PaymentFailedEvent";
 
     public PaymentFailedEvent() {
     }
 
     public String getBookingId() {
         return bookingId;
+    }
+
+    @Override
+    public String getEventType() {
+        return eventType;
     }
 
     public void setBookingId(String bookingId) {

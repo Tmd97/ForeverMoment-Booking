@@ -2,7 +2,7 @@ package com.forvmom.MomentForeverBooking.events;
 
 import java.time.LocalDateTime;
 
-public class BookingFailedEvent {
+public class BookingFailedEvent implements OutboundEvent {
 
     private String bookingId;
     private Long userId;
