@@ -59,6 +59,13 @@ public class PaymentProcessedConsumer {
 
         // Step 1: Idempotency guard — find or create incoming outbox record
         BookingOutbox outbox = outboxService.findOrCreateForEvent(event);
+
+        // Step 2: Already fully processed — nothing to do
+        if (BookingOutbox.STATUS_PROCESSED.equals(outbox.getStatus())) {
+            log.info("Duplicate payment-processed ignored (already PROCESSED): bookingId={}", bookingId);
+            ack.acknowledge();
+            return;
+        }
         // ACK immediately
         ack.acknowledge();
 

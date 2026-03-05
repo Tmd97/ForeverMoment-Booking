@@ -33,7 +33,7 @@ public class PaymentFailedConsumer {
     private final OutboxService outboxService;
 
     public PaymentFailedConsumer(BookingService bookingService,
-            OutgoingOutboxPublisher outgoingOutboxPublisher,OutboxService outboxService) {
+                                 OutgoingOutboxPublisher outgoingOutboxPublisher, OutboxService outboxService) {
         this.bookingService = bookingService;
         this.outgoingOutboxPublisher = outgoingOutboxPublisher;
         this.outboxService = outboxService;
@@ -43,24 +43,27 @@ public class PaymentFailedConsumer {
     public void onPaymentFailed(@Payload PaymentFailedEvent event, Acknowledgment ack) {
         String bookingId = event.getBookingId();
         log.info("Received payment-failed: bookingId={}, reason={}", bookingId, event.getFailureReason());
-
         // Step 1: Idempotency guard — find or create incoming outbox record
         BookingOutbox outbox = outboxService.findOrCreateForEvent(event);
+        // Step 2: Already fully processed — nothing to do
+        if (BookingOutbox.STATUS_PROCESSED.equals(outbox.getStatus())) {
+            log.info("Duplicate payment-failed ignored (already PROCESSED): bookingId={}", bookingId);
+            ack.acknowledge();
+            return;
+        }
         // ACK immediately
         ack.acknowledge();
-
         try {
             String reason = event.getFailureReason() != null
                     ? event.getFailureReason()
                     : "Payment failed (code: " + event.getErrorCode() + ")";
-
             // DB-only TX: update booking + create PENDING outgoing record
             // TX commits → DB connection released before Kafka is touched
+            //claim the record by marking it IN_PROGRESS, then do the work
+            outboxService.markAsProcessing(outbox);
             OutgoingOutboxRecord record = bookingService.failBooking(bookingId, reason);
-
             // Publish outside TX — no DB connection held during Kafka I/O
             outgoingOutboxPublisher.trySinglePublish(record);
-
         } catch (Exception e) {
             log.error("Failed to process payment-failed for bookingId={}: {}", bookingId, e.getMessage(), e);
         }

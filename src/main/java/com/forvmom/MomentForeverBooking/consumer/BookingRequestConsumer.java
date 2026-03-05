@@ -56,35 +56,29 @@ public class BookingRequestConsumer {
 
         // Step 1: Idempotency guard — find or create incoming outbox record
         BookingOutbox outbox = outboxService.findOrCreateForEvent(event);
-
+        OutgoingOutboxRecord outgoingOutboxRecord = null;
         // Step 2: Already fully processed — nothing to do
         if (BookingOutbox.STATUS_PROCESSED.equals(outbox.getStatus())) {
             log.info("Duplicate booking-requested ignored (already PROCESSED): bookingId={}", bookingId);
             ack.acknowledge();
             return;
         }
-
         // Step 3: ACK immediately — Quartz handles any downstream failure
         ack.acknowledge();
-
         try {
             outboxService.markAsProcessing(outbox);
-
             // Step 4: DB-only TX: saves booking + creates PENDING OutgoingOutboxRecord
             // TX commits here — DB connection released before Kafka is touched
-            OutgoingOutboxRecord outgoingRecord = bookingService.processBookingRequest(event);
-
+            outgoingOutboxRecord = bookingService.processBookingRequest(event);
             outboxService.markAsProcessed(outbox);
-
-            // Step 5: Publish to Kafka outside TX — no DB connection held
-            // If this fails, record stays PENDING; Quartz retries without opening a TX
-            outgoingOutboxPublisher.trySinglePublish(outgoingRecord);
-
-            log.info("Booking-requested fully processed: bookingId={}", bookingId);
         } catch (Exception e) {
-            log.error("Failed to process booking-requested bookingId={}: {}", bookingId, e.getMessage(), e);
+            log.error("Failed to process booking-requested bookingId={}", bookingId, e);
             outboxService.markAsFailed(outbox);
-            // Already acked — Quartz OutboxRetryService will retry the processing
+            return; // stop here – do not attempt publish
         }
+        // Step 5: Publish to Kafka outside TX — no DB connection held
+        // If this fails, record stays PENDING; Quartz retries without opening a TX
+        outgoingOutboxPublisher.trySinglePublish(outgoingOutboxRecord);
+        log.info("Booking-requested fully processed: bookingId={}", bookingId);
     }
 }

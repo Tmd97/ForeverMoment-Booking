@@ -4,12 +4,10 @@ import com.forvmom.MomentForeverBooking.domain.entity.BookingOutbox;
 import com.forvmom.MomentForeverBooking.events.InboundEvent;
 import com.forvmom.MomentForeverBooking.repository.BookingOutboxDao;
 import com.forvmom.MomentForeverBooking.utils.JsonUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,7 +27,7 @@ public class OutboxService {
 
     @Transactional
     public BookingOutbox findOrCreateForEvent(InboundEvent event) {
-        Optional<BookingOutbox> existing = outboxDao.findByBookingReferenceId(event.getBookingId());
+        Optional<BookingOutbox> existing = outboxDao.findByBookingReferenceIdAndEventType(event.getBookingId(), event.getEventType());
         if (existing.isPresent()) {
             return existing.get();
         } else {

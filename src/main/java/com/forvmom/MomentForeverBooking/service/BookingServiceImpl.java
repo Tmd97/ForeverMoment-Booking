@@ -108,6 +108,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public OutgoingOutboxRecord confirmBooking(String bookingId) {
+
         Booking booking = getBookingByBookingId(bookingId);
         if (booking.getStatus() == BookingStatus.CONFIRMED)
             return null; // idempotent
@@ -117,22 +118,28 @@ public class BookingServiceImpl implements BookingService {
             throw new BookingStatusConflictException(bookingId, booking.getStatus().name(), "confirm");
         }
 
-        booking.setStatus(BookingStatus.CONFIRMED);
-        booking.setConfirmedAt(LocalDateTime.now());
-        bookingRepository.save(booking);
+        OutgoingOutboxRecord record = null;
+        try {
+            booking.setStatus(BookingStatus.CONFIRMED);
+            booking.setConfirmedAt(LocalDateTime.now());
+            bookingRepository.save(booking);
 
-        BookingConfirmedEvent event = new BookingConfirmedEvent();
-        event.setBookingId(booking.getBookingId());
-        event.setUserId(booking.getUserId());
-        event.setUserEmail(booking.getUserEmail());
-        event.setExperienceId(booking.getExperienceId());
-        event.setTimeSlotMapperId(booking.getTimeSlotMapperId());
-        event.setGuestCount(booking.getGuestCount());
-        event.setConfirmedAt(booking.getConfirmedAt());
+            BookingConfirmedEvent event = new BookingConfirmedEvent();
+            event.setBookingId(booking.getBookingId());
+            event.setUserId(booking.getUserId());
+            event.setUserEmail(booking.getUserEmail());
+            event.setExperienceId(booking.getExperienceId());
+            event.setTimeSlotMapperId(booking.getTimeSlotMapperId());
+            event.setGuestCount(booking.getGuestCount());
+            event.setConfirmedAt(booking.getConfirmedAt());
 
-        OutgoingOutboxRecord record = outgoingOutboxService.createRecord(
-                bookingId, EVT_BOOKING_CONFIRMED, event);
-        log.info("Booking confirmed (outbox created): {}", bookingId);
+            record = outgoingOutboxService.createRecord(
+                    bookingId, EVT_BOOKING_CONFIRMED, event);
+            log.info("Booking confirmed (outbox created): {}", bookingId);
+        } catch (Exception e) {
+            log.warn("Failed to process, so marked as FAILED for bookingId={}: {}", bookingId, e.getMessage());
+            outgoingOutboxService.markAsFailed(record);
+        }
         return record;
     }
 
@@ -145,18 +152,25 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public OutgoingOutboxRecord failBooking(String bookingId, String reason) {
-        Booking booking = getBookingByBookingId(bookingId);
-        if (booking.getStatus() == BookingStatus.FAILED)
-            return null; // idempotent
-        booking.setStatus(BookingStatus.FAILED);
-        booking.setFailureReason(reason);
-        bookingRepository.save(booking);
-        BookingFailedEvent bookingFailedEvent = buildBookingFailedEvent(booking, reason);
+        OutgoingOutboxRecord record = null;
+        try {
+            Booking booking = getBookingByBookingId(bookingId);
+            if (booking.getStatus() == BookingStatus.FAILED)
+                return null; // idempotent
+            booking.setStatus(BookingStatus.FAILED);
+            booking.setFailureReason(reason);
+            bookingRepository.save(booking);
+            BookingFailedEvent bookingFailedEvent = buildBookingFailedEvent(booking, reason);
 
-        OutgoingOutboxRecord record = outgoingOutboxService.createRecord(
-                bookingId, EVT_BOOKING_FAILED, bookingFailedEvent);
-        log.warn("Booking failed (outbox created): {} (reason: {})", bookingId, reason);
-        return record;
+            record = outgoingOutboxService.createRecord(
+                    bookingId, EVT_BOOKING_FAILED, bookingFailedEvent);
+            log.warn("Booking failed (outbox created): {} (reason: {})", bookingId, reason);
+            return record;
+        } catch (Exception e) {
+            log.warn("Failed to process, so marked as FAILED for bookingId={}: {}", bookingId, e.getMessage());
+            outgoingOutboxService.markAsFailed(record);
+        }
+        return null;
     }
 
     // ── Cancel ───────────────────────────────────────────────────────────────
@@ -170,9 +184,13 @@ public class BookingServiceImpl implements BookingService {
         if (booking.getStatus() == BookingStatus.CONFIRMED) {
             throw new BookingStatusConflictException(bookingId, booking.getStatus().name(), "cancel");
         }
-        booking.setStatus(BookingStatus.CANCELLED);
-        bookingRepository.save(booking);
-        log.info("Booking cancelled: {}", bookingId);
+        try {
+            booking.setStatus(BookingStatus.CANCELLED);
+            bookingRepository.save(booking);
+            log.info("Booking cancelled: {}", bookingId);
+        } catch (Exception e) {
+            log.warn("Failed to cancel bookingId={}: {}", bookingId, e.getMessage());
+        }
     }
 
     // ── Queries ───────────────────────────────────────────────────────────────

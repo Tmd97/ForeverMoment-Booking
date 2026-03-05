@@ -59,7 +59,7 @@ public class QuartzConfig {
                 .build();
     }
 
-    /// //////////out going events triggers////////////////////////////
+    /// //////////Outgoing events Job & Triggers////////////////////////////
 
     @Bean
     public JobDetail outgoingOutboxPublisherJobDetail() {

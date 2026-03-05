@@ -9,6 +9,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 @Component
 public class BookingEventProducer {
 
@@ -29,18 +33,18 @@ public class BookingEventProducer {
         this.kafkaTemplate = kafkaTemplate;
     }
 
-    public void sendBookingConfirmedEvent(BookingConfirmedEvent event) {
-        kafkaTemplate.send(bookingConfirmedTopic, event.getBookingId(), event);
+    public void sendBookingConfirmedEvent(BookingConfirmedEvent event) throws ExecutionException, InterruptedException, TimeoutException {
+        kafkaTemplate.send(bookingConfirmedTopic, event.getBookingId(), event).get(5, TimeUnit.SECONDS);
         log.info("Sent BookingConfirmedEvent: bookingId={}", event.getBookingId());
     }
 
-    public void sendBookingFailedEvent(BookingFailedEvent event) {
-        kafkaTemplate.send(bookingFailedTopic, event.getBookingId(), event);
+    public void sendBookingFailedEvent(BookingFailedEvent event) throws ExecutionException, InterruptedException, TimeoutException {
+        kafkaTemplate.send(bookingFailedTopic, event.getBookingId(), event).get(5, TimeUnit.SECONDS);
         log.info("Sent BookingFailedEvent: bookingId={}", event.getBookingId());
     }
 
-    public void sendPaymentRequestedEvent(PaymentRequestedEvent event) {
-        kafkaTemplate.send(paymentRequestedTopic, event.getBookingId(), event);
+    public void sendPaymentRequestedEvent(PaymentRequestedEvent event) throws ExecutionException, InterruptedException, TimeoutException {
+        kafkaTemplate.send(paymentRequestedTopic, event.getBookingId(), event).get(5, TimeUnit.SECONDS);
         log.info("Sent PaymentRequestedEvent: bookingId={}", event.getBookingId());
     }
 }

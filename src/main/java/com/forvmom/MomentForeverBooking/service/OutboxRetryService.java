@@ -80,13 +80,8 @@ public class OutboxRetryService {
     }
 
     private void handlePaymentFailed(BookingOutbox outbox, String bookingId) {
-        // ── Branch A: Outgoing record already exists (common case)
-        // ────────────────────
-        // The @Transactional method committed: booking + outgoing record are both in
-        // DB.
-        // Only the Kafka publish failed. Re-publish directly — NO transaction opened.
         Optional<OutgoingOutboxRecord> existingOutgoing = outgoingOutboxDao.findByBookingIdAndEventType(
-                bookingId, BookingServiceImpl.EVT_PAYMENT_FAILED);
+                bookingId, BookingServiceImpl.EVT_BOOKING_FAILED);
 
         if (existingOutgoing.isPresent()) {
             OutgoingOutboxRecord record = existingOutgoing.get();
@@ -100,14 +95,9 @@ public class OutboxRetryService {
             return;
         }
 
-        // ── Branch B: Nothing in DB (transaction rolled back entirely) ───────────────
-        // Re-run the full processBookingRequest() — it creates booking + outgoing
-        // record
-        // atomically, then we immediately try the Kafka publish.
         log.info("[Branch-B] No outgoing record for bookingId={} — re-running processBookingRequest()", bookingId);
         BookingRequestEvent event = JsonUtils.fromJson(outbox.getPayload(), BookingRequestEvent.class);
         OutgoingOutboxRecord newRecord = bookingService.failBooking(event.getBookingId(), "Payment failed");
-        // Immediate publish attempt outside the processBookingRequest() transaction
         outgoingOutboxPublisher.trySinglePublish(newRecord);
     }
 

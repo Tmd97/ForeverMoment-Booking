@@ -20,4 +20,6 @@ public interface BookingOutboxDao extends JpaRepository<BookingOutbox, Long> {
 
     List<BookingOutbox> findByStatusInAndUpdatedAtBefore(List<String> statuses,
                                                          LocalDateTime cutoff);
+
+    Optional<BookingOutbox> findByBookingReferenceIdAndEventType(String bookingReferenceId, String eventType);
 }
