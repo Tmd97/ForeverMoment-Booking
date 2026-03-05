@@ -1,77 +1,77 @@
 package com.forvmom.MomentForeverBooking.service;
 
-import com.forvmom.MomentForeverBooking.domain.entity.BookingOutbox;
 import com.forvmom.MomentForeverBooking.domain.entity.OutgoingOutboxRecord;
-import com.forvmom.MomentForeverBooking.events.BookingRequestEvent;
-import com.forvmom.MomentForeverBooking.events.PaymentRequestedEvent;
-import com.forvmom.MomentForeverBooking.repository.BookingOutboxDao;
-import com.forvmom.MomentForeverBooking.repository.OutgoingOutboxDao;
 import com.forvmom.MomentForeverBooking.repository.OutgoingOutboxDao;
 import com.forvmom.MomentForeverBooking.utils.JsonUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.Optional;
-
+/**
+ * Manages lifecycle of {@link OutgoingOutboxRecord} — the outbox for events
+ * this service publishes outward (payment-requested, booking-confirmed,
+ * booking-failed).
+ *
+ * <p>
+ * Callers save a record via {@link #createRecord(String, String, Object)},
+ * then immediately attempt a Kafka publish. If publish fails the record stays
+ * PENDING and Quartz picks it up for retry.
+ */
 @Service
 public class OutgoingOutboxService {
+
+    private static final Logger log = LoggerFactory.getLogger(OutgoingOutboxService.class);
+
     private final OutgoingOutboxDao outgoingOutboxDao;
 
     public OutgoingOutboxService(OutgoingOutboxDao outgoingOutboxDao) {
         this.outgoingOutboxDao = outgoingOutboxDao;
     }
 
-//    @Transactional
-//    public BookingOutbox findOrCreateForEvent(PaymentRequestedEvent event) {
-//        String bookingId = event.getBookingId();
-//        Optional<BookingOutbox> existing = outgoingOutboxDao.findByStatusInAndUpdatedAtBefore(bookingId);
-//        return existing.orElseGet(() -> createNewOutbox(event));
-//    }
-
-    public OutgoingOutboxRecord createOutgoingOutBox(PaymentRequestedEvent event) {
-        OutgoingOutboxRecord outgoingOutboxRecord = new OutgoingOutboxRecord();
-        outgoingOutboxRecord.setBookingId(event.getBookingId());
-        outgoingOutboxRecord.setEventType("PAYMENT_REQUESTED");
-        outgoingOutboxRecord.setStatus(OutgoingOutboxRecord.STATUS_PENDING);
-        outgoingOutboxRecord.setRetryCount(0);
-        outgoingOutboxRecord.setPayload(JsonUtils.toJson(event));
-        return outgoingOutboxDao.save(outgoingOutboxRecord);
+    /**
+     * Creates a PENDING outbox record for any outgoing event.
+     *
+     * @param bookingId the booking reference this event belongs to
+     * @param eventType e.g. "PAYMENT_REQUESTED", "BOOKING_CONFIRMED",
+     *                  "BOOKING_FAILED"
+     * @param payload   the event object — will be serialised to JSON
+     */
+    @Transactional
+    public OutgoingOutboxRecord createRecord(String bookingId, String eventType, Object payload) {
+        OutgoingOutboxRecord record = new OutgoingOutboxRecord();
+        record.setBookingId(bookingId);
+        record.setEventType(eventType);
+        record.setStatus(OutgoingOutboxRecord.STATUS_PENDING);
+        record.setRetryCount(0);
+        record.setPayload(JsonUtils.toJson(payload));
+        OutgoingOutboxRecord saved = outgoingOutboxDao.save(record);
+        log.debug("Created outgoing outbox record id={}, type={}, bookingId={}", saved.getId(), eventType, bookingId);
+        return saved;
     }
 
     @Transactional
-    public void markAsProcessing(OutgoingOutboxRecord outgoingOutboxRecord) {
-        outgoingOutboxRecord.setStatus(BookingOutbox.STATUS_PROCESSING);
-        outgoingOutboxRecord.setUpdatedAt(LocalDateTime.now());
-        outgoingOutboxDao.save(outgoingOutboxRecord);
+    public void markAsSent(OutgoingOutboxRecord record) {
+        record.setStatus(OutgoingOutboxRecord.STATUS_SENT);
+        outgoingOutboxDao.save(record);
     }
 
     @Transactional
-    public void markAsProcessed(OutgoingOutboxRecord outgoingOutboxRecord) {
-        outgoingOutboxRecord.setStatus(OutgoingOutboxRecord.STATUS_SENT);
-        outgoingOutboxRecord.setUpdatedAt(LocalDateTime.now());
-        outgoingOutboxDao.save(outgoingOutboxRecord);
+    public void markAsFailed(OutgoingOutboxRecord record) {
+        record.setStatus(OutgoingOutboxRecord.STATUS_FAILED);
+        outgoingOutboxDao.save(record);
     }
 
     @Transactional
-    public void markAsFailed(OutgoingOutboxRecord outgoingOutboxRecord) {
-        outgoingOutboxRecord.setStatus(BookingOutbox.STATUS_FAILED);
-        outgoingOutboxRecord.setUpdatedAt(LocalDateTime.now());
-        outgoingOutboxDao.save(outgoingOutboxRecord);
+    public void markAsDead(OutgoingOutboxRecord record) {
+        record.setStatus(OutgoingOutboxRecord.STATUS_DEAD);
+        outgoingOutboxDao.save(record);
     }
 
     @Transactional
-    public void markAsDead(OutgoingOutboxRecord outgoingOutboxRecord) {
-        outgoingOutboxRecord.setStatus(BookingOutbox.STATUS_DEAD);
-        outgoingOutboxRecord.setUpdatedAt(LocalDateTime.now());
-        outgoingOutboxDao.save(outgoingOutboxRecord);
-    }
-
-    @Transactional
-    public void incrementRetry(OutgoingOutboxRecord outgoingOutboxRecord) {
-        outgoingOutboxRecord.setRetryCount(outgoingOutboxRecord.getRetryCount() + 1);
-        outgoingOutboxRecord.setStatus(BookingOutbox.STATUS_PROCESSING);
-        outgoingOutboxRecord.setUpdatedAt(LocalDateTime.now());
-        outgoingOutboxDao.save(outgoingOutboxRecord);
+    public void incrementRetry(OutgoingOutboxRecord record) {
+        record.setRetryCount(record.getRetryCount() + 1);
+        record.setStatus(OutgoingOutboxRecord.STATUS_FAILED);
+        outgoingOutboxDao.save(record);
     }
 }
