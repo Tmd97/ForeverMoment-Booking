@@ -50,6 +50,7 @@ public class OutgoingOutboxPublisher {
     private final ObjectMapper objectMapper;
     private final AlertService alertService;
     private final OutgoingOutboxService outgoingOutboxService;
+    private final OutgoingOutboxDeadLetterHandler outgoingOutboxDeadLetterHandler;
 
 
     @Autowired
@@ -59,12 +60,15 @@ public class OutgoingOutboxPublisher {
                                    BookingEventProducer eventProducer,
                                    ObjectMapper objectMapper,
                                    AlertService alertService,
-                                   OutgoingOutboxService outgoingOutboxService) {
+                                   OutgoingOutboxService outgoingOutboxService,
+                                      OutgoingOutboxDeadLetterHandler outgoingOutboxDeadLetterHandler
+    ) {
         this.outgoingOutboxDao = outgoingOutboxDao;
         this.eventProducer = eventProducer;
         this.objectMapper = objectMapper;
         this.alertService = alertService;
         this.outgoingOutboxService = outgoingOutboxService;
+        this.outgoingOutboxDeadLetterHandler = outgoingOutboxDeadLetterHandler;
     }
 
     // ── Immediate publish (called by consumers, outside TX) ───────────────────
@@ -141,7 +145,7 @@ public class OutgoingOutboxPublisher {
 
         for (OutgoingOutboxRecord record : pending) {
             if (record.getRetryCount() >= MAX_RETRIES) {
-                handleDeadRecord(record);
+                outgoingOutboxDeadLetterHandler.handleDeadRecord(record);
                 continue;
             }
             try {
@@ -178,173 +182,6 @@ public class OutgoingOutboxPublisher {
                 eventProducer.sendBookingFailedEvent(event);
             }
             default -> log.warn("Unknown outgoing event type: {}", type);
-        }
-    }
-
-    private void handleDeadRecord(OutgoingOutboxRecord record) {
-        outgoingOutboxService.markAsDead(record);
-        String msg = String.format(
-                "Outgoing outbox record id=%d type=%s bookingId=%s moved to DEAD after %d retries",
-                record.getId(), record.getEventType(), record.getBookingId(), MAX_RETRIES);
-        log.error("DEAD: {}", msg);
-        alertService.sendAlert(msg);
-        // Attempt compensation based on event type
-        try {
-            compensateOutgoingDeadRecord(record);
-        } catch (Exception e) {
-            log.error("Compensation failed for outgoing dead record id={}", record.getId(), e);
-            alertService.sendAlert(String.format(
-                    "COMPENSATION FAILED for outgoing dead record id=%d - MANUAL INTERVENTION REQUIRED",
-                    record.getId()
-            ));
-        }
-    }
-
-    private void compensateOutgoingDeadRecord(OutgoingOutboxRecord record) {
-        String eventType = record.getEventType();
-        String bookingId = record.getBookingId();
-        String payload = record.getPayload();
-
-        switch (eventType) {
-            case EventConstants.PAYMENT_REQUESTED:
-                compensatePaymentRequested(bookingId, payload);
-                break;
-
-            case EventConstants.BOOKING_CONFIRMED:
-                compensateBookingConfirmed(bookingId, payload);
-                break;
-
-            case EventConstants.BOOKING_FAILED:
-                compensateBookingFailed(bookingId, payload);
-                break;
-
-            default:
-                log.warn("No compensation handler for outgoing dead event type: {}", eventType);
-        }
-    }
-
-    private void compensatePaymentRequested(String bookingId, String payload) {
-        try {
-            // Payment request permanently failed to publish
-            // This means the payment service never knew about this booking
-            // The booking is stuck in PENDING state with inventory held
-
-            log.warn("PAYMENT_REQUESTED dead letter for bookingId={} - payment service never notified", bookingId);
-
-            // Option 1: Try to get booking details and release inventory
-            try {
-//                Booking booking = bookingService(bookingId);
-
-                // Release the held inventory
-//                inventoryService.releaseInventory(
-//                        booking.getExperienceId(),
-//                        booking.getTimeSlotMapperId(),
-//                        booking.getGuestCount()
-//                );
-
-                log.info("Inventory released for bookingId={} due to dead PAYMENT_REQUESTED", bookingId);
-
-                // Mark booking as FAILED
-//                bookingService.forceFailBooking(bookingId, "Payment request failed permanently");
-
-                // Send notification to user
-//                emailService.sendBookingFailedEmail(
-//                        booking.getUserEmail(),
-//                        bookingId,
-//                        "Unable to process payment request"
-//                );
-
-                alertService.sendAlert(String.format(
-                        "Compensation complete for dead PAYMENT_REQUESTED: booking %s failed, inventory released",
-                        bookingId
-                ));
-
-            } catch (Exception e) {
-                // Booking might not exist or other issues
-                log.error("Cannot compensate PAYMENT_REQUESTED dead letter - booking {} may not exist", bookingId, e);
-
-                alertService.sendAlert(String.format(
-                        "MANUAL ACTION NEEDED: Dead PAYMENT_REQUESTED for booking %s - check inventory state",
-                        bookingId
-                ));
-            }
-
-        } catch (Exception e) {
-            log.error("Failed to compensate PAYMENT_REQUESTED dead letter for bookingId={}", bookingId, e);
-            throw e;
-        }
-    }
-
-    private void compensateBookingConfirmed(String bookingId, String payload) {
-        try {
-            // Booking confirmed event permanently failed to publish
-            // The booking is CONFIRMED in our system, but external services don't know
-
-            log.warn("BOOKING_CONFIRMED dead letter for bookingId={} - external services not notified", bookingId);
-
-            // Deserialize to get details
-            BookingConfirmedEvent event = objectMapper.readValue(payload, BookingConfirmedEvent.class);
-
-            // Option 1: Retry one more time via different mechanism
-            // Create a new outgoing record with same payload (manual retry)
-            OutgoingOutboxRecord retryRecord = outgoingOutboxService.createRecord(
-                    bookingId,
-                    EventConstants.BOOKING_CONFIRMED,
-                    event
-            );
-
-            log.info("Created manual retry record id={} for dead BOOKING_CONFIRMED", retryRecord.getId());
-
-            // Option 2: Send email to admin to manually notify
-//            emailService.sendAdminAlert(
-//                    "Booking Confirmed Notification Failed",
-//                    String.format("Booking %s is CONFIRMED but notification failed. Manual intervention may be needed.", bookingId)
-//            );
-
-            alertService.sendAlert(String.format(
-                    "⚠️ BOOKING_CONFIRMED dead letter: booking %s is confirmed but external systems not notified. Manual retry created.",
-                    bookingId
-            ));
-
-        } catch (Exception e) {
-            log.error("Failed to compensate BOOKING_CONFIRMED dead letter for bookingId={}", bookingId, e);
-            //throw e;
-        }
-    }
-
-    private void compensateBookingFailed(String bookingId, String payload) {
-        try {
-            // Booking failed event permanently failed to publish
-            // The booking is FAILED in our system, but external services don't know
-
-            log.warn("BOOKING_FAILED dead letter for bookingId={} - external services not notified", bookingId);
-
-            // Deserialize to get details
-            BookingFailedEvent event = objectMapper.readValue(payload, BookingFailedEvent.class);
-
-            // For FAILED events, notification is less critical than CONFIRMED
-            // But still should be attempted
-
-            // Option 1: Log and alert only (notification can be missed)
-            log.info("Booking {} is FAILED but failure notification couldn't be sent", bookingId);
-
-            // Option 2: Create manual retry
-            OutgoingOutboxRecord retryRecord = outgoingOutboxService.createRecord(
-                    bookingId,
-                    EventConstants.BOOKING_FAILED,
-                    event
-            );
-
-            log.info("Created manual retry record id={} for dead BOOKING_FAILED", retryRecord.getId());
-
-            alertService.sendAlert(String.format(
-                    "BOOKING_FAILED dead letter: booking %s is failed. Manual retry created.",
-                    bookingId
-            ));
-
-        } catch (Exception e) {
-            log.error("Failed to compensate BOOKING_FAILED dead letter for bookingId={}", bookingId, e);
-            //throw e;
         }
     }
 }
