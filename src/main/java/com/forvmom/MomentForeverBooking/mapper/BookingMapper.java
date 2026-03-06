@@ -5,14 +5,13 @@ import com.forvmom.MomentForeverBooking.domain.entity.BookingAddon;
 import com.forvmom.MomentForeverBooking.domain.enums.BookingStatus;
 import com.forvmom.MomentForeverBooking.domain.enums.PricingLevel;
 import com.forvmom.MomentForeverBooking.events.BookingRequestEvent;
-import org.springframework.stereotype.Component;
+import com.forvmom.MomentForeverBooking.events.InboundEvent;
 
 import java.time.LocalDateTime;
 
-@Component
 public class BookingMapper {
 
-    public Booking toEntity(BookingRequestEvent event) {
+    public static Booking fromBookingRequestEvent(BookingRequestEvent event) {
         Booking booking = new Booking();
         booking.setBookingId(event.getBookingId());
         booking.setUserId(event.getUserId());

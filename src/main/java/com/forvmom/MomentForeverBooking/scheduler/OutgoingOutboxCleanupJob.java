@@ -1,6 +1,6 @@
 package com.forvmom.MomentForeverBooking.scheduler;
 
-import com.forvmom.MomentForeverBooking.service.OutgoingOutboxCleanupService;
+import com.forvmom.MomentForeverBooking.service.retries_cleanup.OutgoingOutboxCleanupService;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.springframework.stereotype.Component;

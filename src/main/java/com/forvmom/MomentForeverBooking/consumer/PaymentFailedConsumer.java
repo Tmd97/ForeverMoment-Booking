@@ -1,11 +1,7 @@
 package com.forvmom.MomentForeverBooking.consumer;
 
-import com.forvmom.MomentForeverBooking.domain.entity.BookingOutbox;
-import com.forvmom.MomentForeverBooking.domain.entity.OutgoingOutboxRecord;
 import com.forvmom.MomentForeverBooking.events.PaymentFailedEvent;
-import com.forvmom.MomentForeverBooking.service.BookingService;
-import com.forvmom.MomentForeverBooking.service.OutboxService;
-import com.forvmom.MomentForeverBooking.service.OutgoingOutboxPublisher;
+import com.forvmom.MomentForeverBooking.service.inbound.InboundEventProcessorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -27,45 +23,14 @@ import org.springframework.stereotype.Component;
 public class PaymentFailedConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentFailedConsumer.class);
+    private final InboundEventProcessorService processingService;
 
-    private final BookingService bookingService;
-    private final OutgoingOutboxPublisher outgoingOutboxPublisher;
-    private final OutboxService outboxService;
-
-    public PaymentFailedConsumer(BookingService bookingService,
-                                 OutgoingOutboxPublisher outgoingOutboxPublisher, OutboxService outboxService) {
-        this.bookingService = bookingService;
-        this.outgoingOutboxPublisher = outgoingOutboxPublisher;
-        this.outboxService = outboxService;
+    public PaymentFailedConsumer(InboundEventProcessorService processingService) {
+        this.processingService = processingService;
     }
 
     @KafkaListener(topics = "${kafka.topics.payment-failed}", groupId = "booking-group", containerFactory = "kafkaListenerContainerFactory")
     public void onPaymentFailed(@Payload PaymentFailedEvent event, Acknowledgment ack) {
-        String bookingId = event.getBookingId();
-        log.info("Received payment-failed: bookingId={}, reason={}", bookingId, event.getFailureReason());
-        // Step 1: Idempotency guard — find or create incoming outbox record
-        BookingOutbox outbox = outboxService.findOrCreateForEvent(event);
-        // Step 2: Already fully processed — nothing to do
-        if (BookingOutbox.STATUS_PROCESSED.equals(outbox.getStatus())) {
-            log.info("Duplicate payment-failed ignored (already PROCESSED): bookingId={}", bookingId);
-            ack.acknowledge();
-            return;
-        }
-        // ACK immediately
-        ack.acknowledge();
-        try {
-            String reason = event.getFailureReason() != null
-                    ? event.getFailureReason()
-                    : "Payment failed (code: " + event.getErrorCode() + ")";
-            // DB-only TX: update booking + create PENDING outgoing record
-            // TX commits → DB connection released before Kafka is touched
-            //claim the record by marking it IN_PROGRESS, then do the work
-            outboxService.markAsProcessing(outbox);
-            OutgoingOutboxRecord record = bookingService.failBooking(bookingId, reason);
-            // Publish outside TX — no DB connection held during Kafka I/O
-            outgoingOutboxPublisher.trySinglePublish(record);
-        } catch (Exception e) {
-            log.error("Failed to process payment-failed for bookingId={}: {}", bookingId, e.getMessage(), e);
-        }
+        processingService.processEvent(event, ack);
     }
 }

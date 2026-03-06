@@ -9,14 +9,14 @@ import java.time.LocalDateTime;
  * Consumed by
  * {@link com.forvmom.MomentForeverBooking.consumer.PaymentFailedConsumer}.
  */
-@Component
+
 public class PaymentFailedEvent implements InboundEvent {
 
     private String bookingId;
     private String failureReason;
     private String errorCode;
     private LocalDateTime failedAt;
-    private String eventType = "PaymentFailedEvent";
+    private String eventType;
 
     public PaymentFailedEvent() {
     }
@@ -30,6 +30,9 @@ public class PaymentFailedEvent implements InboundEvent {
         return eventType;
     }
 
+    public void setEventType(String eventType) {
+        this.eventType = eventType;
+    }
     public void setBookingId(String bookingId) {
         this.bookingId = bookingId;
     }
@@ -57,4 +60,5 @@ public class PaymentFailedEvent implements InboundEvent {
     public void setFailedAt(LocalDateTime failedAt) {
         this.failedAt = failedAt;
     }
+
 }

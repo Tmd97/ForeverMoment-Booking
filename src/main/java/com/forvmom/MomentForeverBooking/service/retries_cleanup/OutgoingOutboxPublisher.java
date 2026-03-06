@@ -1,15 +1,16 @@
-package com.forvmom.MomentForeverBooking.service;
+package com.forvmom.MomentForeverBooking.service.retries_cleanup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.forvmom.MomentForeverBooking.domain.entity.Booking;
 import com.forvmom.MomentForeverBooking.domain.entity.OutgoingOutboxRecord;
 import com.forvmom.MomentForeverBooking.events.BookingConfirmedEvent;
 import com.forvmom.MomentForeverBooking.events.BookingFailedEvent;
-import com.forvmom.MomentForeverBooking.events.BookingRequestEvent;
 import com.forvmom.MomentForeverBooking.events.PaymentRequestedEvent;
 import com.forvmom.MomentForeverBooking.producer.BookingEventProducer;
 import com.forvmom.MomentForeverBooking.repository.OutgoingOutboxDao;
-import com.forvmom.MomentForeverBooking.utils.JsonUtils;
+import com.forvmom.MomentForeverBooking.commons.EventConstants;
+import com.forvmom.MomentForeverBooking.service.BookingService;
+import com.forvmom.MomentForeverBooking.service.OutgoingOutboxService;
+import com.forvmom.MomentForeverBooking.service.alerts.AlertService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,7 +101,7 @@ public class OutgoingOutboxPublisher {
     /**
      * Convenience overload: looks up an existing record by (bookingId, eventType)
      * and calls {@link #trySinglePublish(OutgoingOutboxRecord)}.
-     * Used by {@link OutboxRetryService} for the common retry case where the record
+     * Used by {@link InboundOutboxRetryService} for the common retry case where the record
      * already exists — avoiding re-opening a full transaction.
      */
     public void trySinglePublishByBookingAndType(String bookingId, String eventType) {
@@ -164,15 +165,15 @@ public class OutgoingOutboxPublisher {
 
         switch (type) {
 
-            case BookingServiceImpl.EVT_PAYMENT_REQUESTED -> {
+            case EventConstants.BOOKING_REQUESTED -> {
                 PaymentRequestedEvent event = objectMapper.readValue(json, PaymentRequestedEvent.class);
                 eventProducer.sendPaymentRequestedEvent(event);
             }
-            case BookingServiceImpl.EVT_BOOKING_CONFIRMED -> {
+            case EventConstants.BOOKING_CONFIRMED -> {
                 BookingConfirmedEvent event = objectMapper.readValue(json, BookingConfirmedEvent.class);
                 eventProducer.sendBookingConfirmedEvent(event);
             }
-            case BookingServiceImpl.EVT_BOOKING_FAILED -> {
+            case EventConstants.BOOKING_FAILED -> {
                 BookingFailedEvent event = objectMapper.readValue(json, BookingFailedEvent.class);
                 eventProducer.sendBookingFailedEvent(event);
             }
@@ -205,15 +206,15 @@ public class OutgoingOutboxPublisher {
         String payload = record.getPayload();
 
         switch (eventType) {
-            case BookingServiceImpl.EVT_PAYMENT_REQUESTED:
+            case EventConstants.PAYMENT_REQUESTED:
                 compensatePaymentRequested(bookingId, payload);
                 break;
 
-            case BookingServiceImpl.EVT_BOOKING_CONFIRMED:
+            case EventConstants.BOOKING_CONFIRMED:
                 compensateBookingConfirmed(bookingId, payload);
                 break;
 
-            case BookingServiceImpl.EVT_BOOKING_FAILED:
+            case EventConstants.BOOKING_FAILED:
                 compensateBookingFailed(bookingId, payload);
                 break;
 
@@ -232,7 +233,7 @@ public class OutgoingOutboxPublisher {
 
             // Option 1: Try to get booking details and release inventory
             try {
-                Booking booking = bookingService.getBookingByBookingId(bookingId);
+//                Booking booking = bookingService(bookingId);
 
                 // Release the held inventory
 //                inventoryService.releaseInventory(
@@ -288,7 +289,7 @@ public class OutgoingOutboxPublisher {
             // Create a new outgoing record with same payload (manual retry)
             OutgoingOutboxRecord retryRecord = outgoingOutboxService.createRecord(
                     bookingId,
-                    BookingServiceImpl.EVT_BOOKING_CONFIRMED,
+                    EventConstants.BOOKING_CONFIRMED,
                     event
             );
 
@@ -330,7 +331,7 @@ public class OutgoingOutboxPublisher {
             // Option 2: Create manual retry
             OutgoingOutboxRecord retryRecord = outgoingOutboxService.createRecord(
                     bookingId,
-                    BookingServiceImpl.EVT_BOOKING_FAILED,
+                    EventConstants.BOOKING_FAILED,
                     event
             );
 

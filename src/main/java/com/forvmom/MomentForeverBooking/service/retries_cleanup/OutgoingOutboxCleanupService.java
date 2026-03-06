@@ -1,4 +1,4 @@
-package com.forvmom.MomentForeverBooking.service;
+package com.forvmom.MomentForeverBooking.service.retries_cleanup;
 
 import com.forvmom.MomentForeverBooking.domain.entity.OutgoingOutboxRecord;
 import com.forvmom.MomentForeverBooking.repository.OutgoingOutboxDao;

@@ -1,29 +1,23 @@
 package com.forvmom.MomentForeverBooking.domain.entity;
 
+import com.forvmom.MomentForeverBooking.commons.EventConstants;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "booking_outbox", indexes = {
-        @Index(name = "idx_booking_outbox_status_updated", columnList = "status, updated_at"),
-        @Index(name = "idx_booking_outbox_ref", columnList = "booking_reference_id", unique = true)
+@Table(name = "inbound_outbox", indexes = {
+        @Index(name = "idx_inbound_outbox_status_updated", columnList = "status, updated_at"),
+        @Index(name = "idx_inbound_outbox_ref", columnList = "booking_ref_id", unique = true)
 })
-public class BookingOutbox {
-
-    public static final String STATUS_NEW = "NEW";
-    public static final String STATUS_PROCESSING = "PROCESSING";
-    public static final String STATUS_PROCESSED = "PROCESSED";
-    public static final String STATUS_FAILED = "FAILED";
-    public static final String STATUS_DEAD = "DEAD";
-    public static final String PENDING = "PENDING";
+public class InboundOutbox {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     /** e.g. MFB-1735000000000-A3F2 — idempotency key for incoming events */
-    @Column(name = "booking_reference_id", nullable = false, unique = true)
+    @Column(name = "booking_ref_id", nullable = false, unique = true)
     private String bookingReferenceId;
 
     /** e.g. "BOOKING_REQUESTED" */
@@ -35,7 +29,7 @@ public class BookingOutbox {
     private String payload;
 
     @Column(name = "status", nullable = false)
-    private String status = STATUS_NEW;
+    private String status = EventConstants.PENDING;
 
     @Column(name = "retry_count", nullable = false)
     private int retryCount = 0;

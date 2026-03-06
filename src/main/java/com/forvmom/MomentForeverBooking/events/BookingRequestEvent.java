@@ -7,7 +7,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Component
 public class BookingRequestEvent implements InboundEvent {
     private String bookingId;
     private Long userId;
@@ -34,7 +33,7 @@ public class BookingRequestEvent implements InboundEvent {
     private BigDecimal addonsTotal;
     private BigDecimal grandTotal;
     private LocalDateTime requestedAt;
-    private String eventType = "BookingRequestEvent";
+    private String eventType;
 
     public BookingRequestEvent() {
     }
@@ -46,6 +45,10 @@ public class BookingRequestEvent implements InboundEvent {
     @Override
     public String getEventType() {
         return eventType;
+    }
+
+    public void setEventType(String eventType) {
+        this.eventType = eventType;
     }
 
     public void setBookingId(String bookingId) {

@@ -26,7 +26,8 @@ public class BookingAdminController {
     @GetMapping("/{bookingId}")
     @Operation(summary = "Get Booking by ID", description = "Fetch full booking details by booking reference ID")
     public ResponseEntity<Booking> getBookingById(@PathVariable String bookingId) {
-        return ResponseEntity.ok(bookingService.getBookingByBookingId(bookingId));
+        Booking booking = bookingService.getBookingByBookingId(bookingId);
+        return ResponseEntity.ok(booking);
     }
 
     @GetMapping("/user/{userId}")
@@ -37,7 +38,8 @@ public class BookingAdminController {
             @RequestParam(defaultValue = "10") int size) {
 
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(bookingService.getBookingsByUser(userId, pageRequest));
+        Page<Booking> bookings = bookingService.getBookingsByUser(userId, pageRequest);
+        return ResponseEntity.ok(bookings);
     }
 
     @PutMapping("/{bookingId}/cancel")

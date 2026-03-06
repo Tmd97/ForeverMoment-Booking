@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  * Consumed by
  * {@link com.forvmom.MomentForeverBooking.consumer.PaymentProcessedConsumer}.
  */
-@Component
+
 public class PaymentProcessedEvent implements InboundEvent {
 
     private String bookingId;
@@ -18,7 +18,7 @@ public class PaymentProcessedEvent implements InboundEvent {
     private BigDecimal amountPaid;
     private String currency;
     private LocalDateTime paidAt;
-    private String eventType = "PaymentProcessedEvent";
+    private String eventType;
 
     public PaymentProcessedEvent() {
     }
@@ -31,6 +31,13 @@ public class PaymentProcessedEvent implements InboundEvent {
     public String getEventType() {
         return eventType;
     }
+
+    public void setEventType(String eventType) {
+        this.eventType = eventType;
+    }
+
+
+
 
     public void setBookingId(String bookingId) {
         this.bookingId = bookingId;
@@ -67,4 +74,5 @@ public class PaymentProcessedEvent implements InboundEvent {
     public void setPaidAt(LocalDateTime paidAt) {
         this.paidAt = paidAt;
     }
+
 }
