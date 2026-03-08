@@ -2,7 +2,7 @@
 # SERVER CONFIGURATION
 # ==========================================================
 server:
-  port: 8081
+  port: 8082
   forward-headers-strategy: framework
 
   servlet:
