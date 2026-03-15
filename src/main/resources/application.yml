@@ -46,6 +46,8 @@ spring:
         health-check-path: /actuator/health
         health-check-interval: 10s
         instance-id: ${spring.application.name}:${random.value}
+        prefer-ip-address: true
+        deregister-after: 1m
 
 
   # ----------------------------------------------------------
